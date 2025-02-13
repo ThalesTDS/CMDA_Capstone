@@ -446,7 +446,6 @@ def main():
     dataset_directory = get_file_or_dir_path()
     analyze_directory(dataset_directory)
 
-    # Run test on sample code snippet.
     # analyze_single_file("sample_code.py")
     # analyze_single_file("sample_code_bad.py")
 
