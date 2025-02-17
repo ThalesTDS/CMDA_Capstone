@@ -22,3 +22,8 @@
 ### **Readability/Accuracy**
 - Currently iffy.
 - Likely requires NLP-based improvements.
+
+
+### **General**
+- Create/Find sample code to run tests on.
+- Adjust weighting of metrics.

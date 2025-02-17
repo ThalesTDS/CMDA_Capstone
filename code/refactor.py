@@ -486,15 +486,15 @@ class FileLoader:
         return match.group(0) if match else file_path
 
     @staticmethod
-    def get_dir_path(folder_name: Optional[str] = None) -> str:
+    def get_dir_path(sub_folder_name: Optional[str] = None) -> str:
         """
         Construct a directory path to the data folder or a subfolder within it.
 
-        :param folder_name: Optional data subfolder; if None, entire data directory is used.
+        :param sub_folder_name: Optional data subfolder; if None, entire data directory is used.
         :return: Constructed path as a string.
         """
         base_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        return base_dir if folder_name is None else os.path.join(base_dir, folder_name)
+        return base_dir if sub_folder_name is None else os.path.join(base_dir, sub_folder_name)
 
 
 class ProjectAnalyzer:
