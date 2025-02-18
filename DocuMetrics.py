@@ -208,24 +208,25 @@ class CodeMetrics:
             return 0.0
 
     @staticmethod
-    def compute_redundancy(inline_comments: List[Tuple[int, str]],
-                           code_lines: List[str]) -> float:
+    def compute_redundancy(inline_comments: list, code_lines: list) -> float:
         """
-        For each inline comment, compute cosine similarity with its corresponding code line,
-        and return the inverse of the average similarity (lower similarity is better).
-
-        :param inline_comments: List of tuples (line number, inline comment).
-        :param code_lines: List of code lines.
+        Compute redundancy by checking if inline comments repeat similar information as other comments.
+        Uses TF-IDF (Term Frequency-Inverse Document Frequency) to convert comments into numerical vectors based on word importance.
+        Then, cosine similarity is used to measure how similar the comments are to one another, helping detect repetitive documentation.
+        
+        :param inline_comments: List of inline comment strings.
+        :param code_lines: List of code lines (not used directly in redundancy evaluation now).
         :return: Redundancy score between 0 and 1.
         """
-        similarities = []
-        for line_no, comment in inline_comments:
-            if 1 <= line_no <= len(code_lines):
-                code_line = code_lines[line_no - 1]
-                sim = CodeMetrics.compute_similarity(comment, code_line)
-                similarities.append(sim)
-        avg_sim = np.mean(similarities) if similarities else 0.0
-        return 1 - avg_sim
+        if not inline_comments:
+            return 0.0
+        
+        vectorizer = TfidfVectorizer()
+        vectors = vectorizer.fit_transform(inline_comments)
+        similarity_matrix = cosine_similarity(vectors)
+        avg_similarity = (similarity_matrix.sum() - len(inline_comments)) / (len(inline_comments) * (len(inline_comments) - 1))
+        return avg_similarity
+   
 
     @staticmethod
     def check_conciseness(comments: List[str], verbose_threshold: int = 20) -> float:
