@@ -12,6 +12,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
 
+# Load a sentence transformer model
+bert_model = SentenceTransformer('all-MiniLM-L6-v2')
+
 # Global metric list used for aggregation and display.
 METRICS_LIST = [
     "comment_density",
@@ -146,18 +149,14 @@ class CodeMetrics:
         
         for comment in comments:
             flesch = textstat.flesch_reading_ease(comment)  # Higher is easier to read
-            fk_grade = textstat.flesch_kincaid_grade(comment)  # Lower is better
-            dale_chall = textstat.dale_chall_readability_score(comment)  # Lower is better
             ari = textstat.automated_readability_index(comment)  # Lower is better
             
             # Normalize scores (Flesch is already 0-100, others require scaling)
             normalized_flesch = np.clip(flesch / 100, 0, 1)
-            normalized_fk = np.clip(1 - (fk_grade / 20), 0, 1)  # Approx. max grade level 20
-            normalized_dale = np.clip(1 - (dale_chall / 15), 0, 1)  # Dale-Chall typically < 15
-            normalized_ari = np.clip(1 - (ari / 20), 0, 1)  # ARI typically < 20
+            normalized_ari = np.clip(1 - (ari / 15), 0, 1)  # ARI typically < 20
             
             # Combine all scores
-            readability_score = (normalized_flesch + normalized_fk + normalized_dale + normalized_ari) / 4
+            readability_score = (normalized_flesch + normalized_ari) / 2
             readability_scores.append(readability_score)
         
         # Return average readability score
@@ -251,7 +250,7 @@ class CodeMetrics:
         :return: Redundancy score between 0 and 1.
         """
         if not inline_comments:
-            return 0.0
+            return 1.0
 
         # Extract only the comment text (ignore line numbers)
         comment_texts = [comment[1] for comment in inline_comments]
@@ -261,7 +260,8 @@ class CodeMetrics:
         similarity_matrix = cosine_similarity(vectors)
         avg_similarity = (similarity_matrix.sum() - len(comment_texts)) / (len(comment_texts) * (len(comment_texts) - 1))
         
-        return avg_similarity
+        inverted_score = 1 - avg_similarity  # **Invert the score so lower redundancy = higher score**
+        return max(0.0, min(inverted_score, 1.0))  # Ensure score stays between 0 and 1
 
    
 
@@ -278,7 +278,6 @@ class CodeMetrics:
         verbose_count = sum(1 for comment in comments if len(comment.split()) > verbose_threshold)
         return 1 - (verbose_count / len(comments)) if comments else 1.0
 
-    model = SentenceTransformer('all-MiniLM-L6-v2')
     @staticmethod
     def evaluate_accuracy(comment: str, code_snippet: str) -> float:
         """
