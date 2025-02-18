@@ -179,33 +179,49 @@ class CodeMetrics:
             tree = ast.parse(code)
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):  # Check function definitions
-                    param_count = sum(1 for arg in node.args.args if arg.arg not in ("self", "cls"))
+                    param_names = [arg.arg for arg in node.args.args if arg.arg not in ("self", "cls")]                   
                     has_return = isinstance(node.returns, ast.Name)  # Checks if a return type is declared
-                    
-                    needs_param = param_count > 0  # Function requires @param if it has parameters
+                                    
+                    print(f"DEBUG: Extracted Parameters = {param_names}")
+                    print(f"DEBUG: Has return = {has_return}")
+                    needs_param = len(param_names) > 0  # Function requires @param if it has parameters
                     needs_return = has_return      # Function requires @return if return type exists
                     
-                    required_keywords = []
-                    if needs_param:
-                        required_keywords.append("@param")
-                    if needs_return:
-                        required_keywords.append("@return")
-                    
-                    # Check if the docstring contains a general description (not just `@param` and `@return`)
-                    docstring_lines = docstring.strip().split("\n")
-                    first_line = docstring_lines[0].strip() if docstring_lines else ""
-                    has_general_description = len(first_line.split()) > 5  # Requires at least 5 words
+                    # Check if the docstring contains necessary components
+                    has_param_doc = all(f"@param {param}" in docstring for param in param_names) if needs_param else True
+                    has_return_doc = "@return" in docstring if needs_return else True
+                    has_general_desc = len(docstring.strip().split("\n")[0].split()) > 5  # At least 5 words in first line
+
+                    print(f"DEBUG: needs_param={needs_param}, has_param_doc={has_param_doc}")
+                    print(f"DEBUG: needs_return={needs_return}, has_return_doc={has_return_doc}")
+                    print(f"DEBUG: has_general_desc={has_general_desc}")
 
                     # Calculate completeness score
                     completeness_score = 0.0
-                    if has_general_description:
-                        completeness_score += 0.4  # General description carries 40% weight
-                    if needs_param and "@param" in docstring:
-                        completeness_score += 0.3  # Params contribute 30% to completeness
-                    if needs_return and "@return" in docstring:
-                        completeness_score += 0.3  # Return doc contributes 30%
+                    if has_general_desc:
+                        completeness_score += 0.5  # General description contributes 50%
+                    if needs_param and has_param_doc:
+                        completeness_score += 0.25  # Parameter documentation is 25%
+                    if needs_return and has_return_doc:
+                        completeness_score += 0.25  # Return documentation is 25%
+                        
+                        # Check if the docstring contains a general description (not just `@param` and `@return`)
+                        docstring_lines = docstring.strip().split("\n")
+                        first_line = docstring_lines[0].strip() if docstring_lines else ""
+                        has_general_description = len(first_line.split()) > 5  # Requires at least 5 words
+
+                        # Calculate completeness score
+                        completeness_score = 0.0
+                        if has_general_description:
+                            completeness_score += 0.4  # General description carries 40% weight
+                        if needs_param and "@param" in docstring:
+                            completeness_score += 0.3  # Params contribute 30% to completeness
+                        if needs_return and "@return" in docstring:
+                            completeness_score += 0.3  # Return doc contributes 30%
                     
-                return completeness_score        
+                        return completeness_score     
+                    print(f"DEBUG: Final Completeness Score = {completeness_score}")
+   
         except SyntaxError:
             return 0.0  # Fallback in case of syntax issues
         
