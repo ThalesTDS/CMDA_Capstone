@@ -6,11 +6,6 @@
 ### **Conciseness**
 - Appears to be working well but requires further testing.
 
-
-### **Completeness** 
-- Currently returns a bool but needs to return a float.
-- Im going to work on that -Amy
-
 ### **General**
 - Create/Find sample code to run tests on.
 - Adjust weighting of metrics.
