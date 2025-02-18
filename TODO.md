@@ -6,13 +6,9 @@
 ### **Conciseness**
 - Appears to be working well but requires further testing.
 
-### **Readability/Accuracy**
-- Currently iffy.
-- Likely requires NLP-based improvements.
 
 ### **Completeness** 
-- Currently returns a bools
-- Needs to return a float.
+- Currently returns a bool but needs to return a float.
 - Im going to work on that -Amy
 
 ### **General**
