@@ -10,6 +10,10 @@
 - Currently iffy.
 - Likely requires NLP-based improvements.
 
+### **Completeness** 
+- Currently returns a bools
+- Needs to return a float.
+- Im going to work on that -Amy
 
 ### **General**
 - Create/Find sample code to run tests on.
