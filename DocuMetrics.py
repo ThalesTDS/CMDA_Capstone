@@ -164,16 +164,16 @@ class CodeMetrics:
         return np.mean(readability_scores)
 
     @staticmethod
-    def check_completeness(code: str, docstring: str) -> bool:
+    def check_completeness(code: str, docstring: str) -> float:
         """
         Check if the docstring contains required elements based on function/class definition.
         
         :param code: The full source code containing the function/class.
         :param docstring: The function/class docstring.
-        :return: True if completeness criteria are met, otherwise False.
+        :return: A completeness score between 0 (incomplete) and 1 (fully complete).
         """
         if not docstring:
-            return False
+            return 0.0
         
         try:
             tree = ast.parse(code)
@@ -191,18 +191,25 @@ class CodeMetrics:
                     if needs_return:
                         required_keywords.append("@return")
                     
-                  # Check if the docstring contains a general description (not just `@param` and `@return`)
+                    # Check if the docstring contains a general description (not just `@param` and `@return`)
                     docstring_lines = docstring.strip().split("\n")
                     first_line = docstring_lines[0].strip() if docstring_lines else ""
                     has_general_description = len(first_line.split()) > 5  # Requires at least 5 words
 
-                    # Ensure required keywords exist
-                    return all(keyword in docstring for keyword in required_keywords) or len(docstring.strip()) > 10
-        
+                    # Calculate completeness score
+                    completeness_score = 0.0
+                    if has_general_description:
+                        completeness_score += 0.4  # General description carries 40% weight
+                    if needs_param and "@param" in docstring:
+                        completeness_score += 0.3  # Params contribute 30% to completeness
+                    if needs_return and "@return" in docstring:
+                        completeness_score += 0.3  # Return doc contributes 30%
+                    
+                return completeness_score        
         except SyntaxError:
-            return False  # Fallback in case of syntax issues
+            return 0.0  # Fallback in case of syntax issues
         
-        return True  # Default case (should never reach here)
+        return 1.0  # Default case (should never reach here)
 
 
     @staticmethod
