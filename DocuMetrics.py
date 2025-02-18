@@ -134,17 +134,34 @@ class CodeMetrics:
     @staticmethod
     def compute_readability_scores(comments: List[str]) -> float:
         """
-        Compute the average normalized Flesch Reading Ease score for a list of comments.
-
+        Compute the average readability score for a list of comments using multiple readability metrics.
+        (Flesch, FK Grade, Dale-Chall, ARI)
         :param comments: List of comment strings.
-        :return: Normalized average readability score between 0 (hard) and 1 (easy).
+        :return: Normalized readability score between 0 (hard) and 1 (easy).
         """
-        scores = [textstat.flesch_reading_ease(comment) for comment in comments]
-        if scores:
-            avg_score = np.mean(scores)
-            # Normalize to [0,1] (0 = unreadable, 1 = very easy)
-            return float(np.clip(avg_score / 100, 0, 1))
-        return 0.0
+        if not comments:
+            return 0.0
+
+        readability_scores = []
+        
+        for comment in comments:
+            flesch = textstat.flesch_reading_ease(comment)  # Higher is easier to read
+            fk_grade = textstat.flesch_kincaid_grade(comment)  # Lower is better
+            dale_chall = textstat.dale_chall_readability_score(comment)  # Lower is better
+            ari = textstat.automated_readability_index(comment)  # Lower is better
+            
+            # Normalize scores (Flesch is already 0-100, others require scaling)
+            normalized_flesch = np.clip(flesch / 100, 0, 1)
+            normalized_fk = np.clip(1 - (fk_grade / 20), 0, 1)  # Approx. max grade level 20
+            normalized_dale = np.clip(1 - (dale_chall / 15), 0, 1)  # Dale-Chall typically < 15
+            normalized_ari = np.clip(1 - (ari / 20), 0, 1)  # ARI typically < 20
+            
+            # Combine all scores
+            readability_score = (normalized_flesch + normalized_fk + normalized_dale + normalized_ari) / 4
+            readability_scores.append(readability_score)
+        
+        # Return average readability score
+        return np.mean(readability_scores)
 
     @staticmethod
     def check_completeness(code: str, docstring: str) -> bool:
