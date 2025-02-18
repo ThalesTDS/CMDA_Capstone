@@ -10,6 +10,7 @@ import matplotlib.gridspec as gridspec
 from textstat import textstat
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer, util
 
 # Global metric list used for aggregation and display.
 METRICS_LIST = [
@@ -146,22 +147,46 @@ class CodeMetrics:
         return 0.0
 
     @staticmethod
-    def check_completeness(code: str) -> float:
+    def check_completeness(code: str, docstring: str) -> bool:
         """
-        Check that functions and classes have adequate docstrings.
-
-        :param code: The source code as a string.
-        :return: Ratio of documented definitions (with docstrings longer than 10 characters)
-                 to the total number of definitions.
+        Check if the docstring contains required elements based on function/class definition.
+        
+        :param code: The full source code containing the function/class.
+        :param docstring: The function/class docstring.
+        :return: True if completeness criteria are met, otherwise False.
         """
+        if not docstring:
+            return False
+        
         try:
             tree = ast.parse(code)
-            nodes = [node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))]
-            total = len(nodes)
-            documented = sum(1 for node in nodes if (ast.get_docstring(node) or "").strip() and len(ast.get_docstring(node).strip()) > 10)
-            return documented / total if total > 0 else 1.0
-        except Exception:
-            return 0.0
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):  # Check function definitions
+                    param_count = sum(1 for arg in node.args.args if arg.arg not in ("self", "cls"))
+                    has_return = isinstance(node.returns, ast.Name)  # Checks if a return type is declared
+                    
+                    needs_param = param_count > 0  # Function requires @param if it has parameters
+                    needs_return = has_return      # Function requires @return if return type exists
+                    
+                    required_keywords = []
+                    if needs_param:
+                        required_keywords.append("@param")
+                    if needs_return:
+                        required_keywords.append("@return")
+                    
+                  # Check if the docstring contains a general description (not just `@param` and `@return`)
+                    docstring_lines = docstring.strip().split("\n")
+                    first_line = docstring_lines[0].strip() if docstring_lines else ""
+                    has_general_description = len(first_line.split()) > 5  # Requires at least 5 words
+
+                    # Ensure required keywords exist
+                    return all(keyword in docstring for keyword in required_keywords) or len(docstring.strip()) > 10
+        
+        except SyntaxError:
+            return False  # Fallback in case of syntax issues
+        
+        return True  # Default case (should never reach here)
+
 
     @staticmethod
     def compute_similarity(text1: str, text2: str) -> float:
@@ -215,6 +240,7 @@ class CodeMetrics:
         verbose_count = sum(1 for comment in comments if len(comment.split()) > verbose_threshold)
         return 1 - (verbose_count / len(comments)) if comments else 1.0
 
+    model = SentenceTransformer('all-MiniLM-L6-v2')
     @staticmethod
     def evaluate_accuracy_bert(comment: str, code_snippet: str) -> float:
         """
