@@ -12,9 +12,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
 
-# Load a sentence transformer model
-bert_model = SentenceTransformer('all-MiniLM-L6-v2')
-
 # Global metric list used for aggregation and display.
 METRICS_LIST = [
     "comment_density",
@@ -82,6 +79,8 @@ class CodeParser:
 # Metrics Calculation
 # =============================================================================
 class CodeMetrics:
+    # Load a sentence transformer model
+    model = SentenceTransformer('all-MiniLM-L6-v2')
     @staticmethod
     def compute_comment_density(code: str,
                                 inline_comments: List[Tuple[int, str]],
