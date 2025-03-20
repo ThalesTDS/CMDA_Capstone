@@ -1,20 +1,35 @@
-# This is a module-level comment
+# This module provides basic arithmetic operations through functions and a Calculator class.
 
-def add(a, b):
-    """Add two numbers and return the result."""
-    # Perform addition
+def add(a: float, b: float) -> float:
+    """
+    Adds two numbers and returns the result.
+
+    Parameters:
+        a (float): The first number.
+        b (float): The second number.
+
+    Returns:
+        float: The sum of the two numbers.
+    """
     return a + b
 
 class Calculator:
     """
-    A simple calculator class.
-    Provides basic arithmetic operations.
-    """
-    def multiply(self, a, b):
-        # Multiply two numbers
-        result = a * b  # Inline comment: multiplication
-        return result
+    A simple calculator class for performing basic arithmetic operations.
 
-def undocumented_function(x):
-    # This function lacks a docstring and does trivial work.
-    return x * 2
+    Methods:
+        multiply(a, b): Multiplies two numbers and returns the result.
+    """
+
+    def multiply(self, a: float, b: float) -> float:
+        """
+        Multiplies two numbers and returns the result.
+
+        Parameters:
+            a (float): The first number.
+            b (float): The second number.
+
+        Returns:
+            float: The product of the two numbers.
+        """
+        return a * b
