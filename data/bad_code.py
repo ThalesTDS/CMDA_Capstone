@@ -1,5 +1,7 @@
 def avg(lst):
-    # Function to find avg
+    # Function 2 find da avg
+    # sum
     s = sum(lst)  # sum
+    # length
     c = len(lst)  # length
     return s / c  # division

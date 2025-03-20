@@ -248,7 +248,7 @@ class CodeMetrics:
         :param code_lines: List of code lines (not used directly in redundancy evaluation now).
         :return: Redundancy score between 0 and 1.
         """
-        if not inline_comments:
+        if not inline_comments or len(inline_comments) == 1:
             return 1.0
 
         # Extract only the comment text (ignore line numbers)
@@ -261,8 +261,6 @@ class CodeMetrics:
         
         inverted_score = 1 - avg_similarity  # **Invert the score so lower redundancy = higher score**
         return max(0.0, min(inverted_score, 1.0))  # Ensure score stays between 0 and 1
-
-   
 
     @staticmethod
     def check_conciseness(comments: List[str], verbose_threshold: int = 20) -> float:
