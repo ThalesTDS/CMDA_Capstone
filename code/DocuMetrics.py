@@ -160,7 +160,7 @@ class CodeMetrics:
             readability_scores.append(readability_score)
 
         # Return average readability score
-        return np.mean(readability_scores)
+        return float(np.mean(readability_scores))
 
     @staticmethod
     def compute_completeness(code: str, docstring: str) -> float:
@@ -240,14 +240,15 @@ class CodeMetrics:
             return 0.0
 
     @staticmethod
-    def compute_redundancy(inline_comments: list, code_lines: list) -> float:
+    def compute_redundancy(inline_comments: list) -> float:
         """
         Compute redundancy by checking if inline comments repeat similar information as other comments.
-        Uses TF-IDF (Term Frequency-Inverse Document Frequency) to convert comments into numerical vectors based on word importance.
-        Then, cosine similarity is used to measure how similar the comments are to one another, helping detect repetitive documentation.
+        Uses TF-IDF (Term Frequency-Inverse Document Frequency) to convert comments into
+            numerical vectors based on word importance.
+        Then, cosine similarity is used to measure how similar the comments are to one another,
+            helping detect repetitive documentation.
 
         :param inline_comments: List of tuples (line number, inline comment text).
-        :param code_lines: List of code lines (not used directly in redundancy evaluation now).
         :return: Redundancy score between 0 and 1.
         """
         if not inline_comments or len(inline_comments) == 1:
@@ -465,7 +466,7 @@ class CodeAnalyzer:
         docstring = docstrings[0] if docstrings else ""
 
         completeness = CodeMetrics.compute_completeness(code, docstring)
-        redundancy = CodeMetrics.compute_redundancy(inline_comments, code_lines)
+        redundancy = CodeMetrics.compute_redundancy(inline_comments)
         conciseness = CodeMetrics.compute_conciseness(all_comments)
         accuracy = CodeMetrics.compute_accuracy_scores(inline_comments, code_lines)
 
