@@ -81,6 +81,7 @@ class CodeParser:
 class CodeMetrics:
     # Load a sentence transformer model
     model = SentenceTransformer('all-MiniLM-L6-v2')
+
     @staticmethod
     def compute_comment_density(code: str,
                                 inline_comments: List[Tuple[int, str]],
@@ -145,48 +146,50 @@ class CodeMetrics:
             return 0.0
 
         readability_scores = []
-        
+
         for comment in comments:
             flesch = textstat.flesch_reading_ease(comment)  # Higher is easier to read
             ari = textstat.automated_readability_index(comment)  # Lower is better
-            
+
             # Normalize scores (Flesch is already 0-100, others require scaling)
             normalized_flesch = np.clip(flesch / 100, 0, 1)
             normalized_ari = np.clip(1 - (ari / 15), 0, 1)  # ARI typically < 20
-            
+
             # Combine all scores
             readability_score = (normalized_flesch + normalized_ari) / 2
             readability_scores.append(readability_score)
-        
+
         # Return average readability score
         return np.mean(readability_scores)
 
     @staticmethod
-    def check_completeness(code: str, docstring: str) -> float:
+    def compute_completeness(code: str, docstring: str) -> float:
         """
         Check if the docstring contains required elements based on function/class definition.
-        
+
         :param code: The full source code containing the function/class.
         :param docstring: The function/class docstring.
         :return: A completeness score between 0 (incomplete) and 1 (fully complete).
         """
         if not docstring:
             return 0.0
-        
+
         try:
             tree = ast.parse(code)
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):  # Check function definitions
-                    param_names = [arg.arg for arg in node.args.args if arg.arg not in ("self", "cls")]                   
+                    param_names = [arg.arg for arg in node.args.args if arg.arg not in ("self", "cls")]
                     has_return = isinstance(node.returns, ast.Name)  # Checks if a return type is declared
-                                    
+
                     needs_param = len(param_names) > 0  # Function requires @param if it has parameters
-                    needs_return = has_return      # Function requires @return if return type exists
-                    
+                    needs_return = has_return  # Function requires @return if return type exists
+
                     # Check if the docstring contains necessary components
-                    has_param_doc = all(f"@param {param}" in docstring for param in param_names) if needs_param else True
+                    has_param_doc = all(
+                        f"@param {param}" in docstring for param in param_names) if needs_param else True
                     has_return_doc = "@return" in docstring if needs_return else True
-                    has_general_desc = len(docstring.strip().split("\n")[0].split()) > 5  # At least 5 words in first line
+                    has_general_desc = len(
+                        docstring.strip().split("\n")[0].split()) > 5  # At least 5 words in first line
 
                     # Calculate completeness score
                     completeness_score = 0.0
@@ -196,7 +199,7 @@ class CodeMetrics:
                         completeness_score += 0.25  # Parameter documentation is 25%
                     if needs_return and has_return_doc:
                         completeness_score += 0.25  # Return documentation is 25%
-                        
+
                         # Check if the docstring contains a general description (not just `@param` and `@return`)
                         docstring_lines = docstring.strip().split("\n")
                         first_line = docstring_lines[0].strip() if docstring_lines else ""
@@ -210,13 +213,12 @@ class CodeMetrics:
                             completeness_score += 0.3  # Params contribute 30% to completeness
                         if needs_return and "@return" in docstring:
                             completeness_score += 0.3  # Return doc contributes 30%
-                    
-                        return completeness_score        
+
+                        return completeness_score
         except SyntaxError:
             return 0.0  # Fallback in case of syntax issues
-        
-        return 1.0  # Default case (should never reach here)
 
+        return 1.0  # Default case (should never reach here)
 
     @staticmethod
     def compute_similarity(text1: str, text2: str) -> float:
@@ -243,7 +245,7 @@ class CodeMetrics:
         Compute redundancy by checking if inline comments repeat similar information as other comments.
         Uses TF-IDF (Term Frequency-Inverse Document Frequency) to convert comments into numerical vectors based on word importance.
         Then, cosine similarity is used to measure how similar the comments are to one another, helping detect repetitive documentation.
-        
+
         :param inline_comments: List of tuples (line number, inline comment text).
         :param code_lines: List of code lines (not used directly in redundancy evaluation now).
         :return: Redundancy score between 0 and 1.
@@ -257,13 +259,14 @@ class CodeMetrics:
         vectorizer = TfidfVectorizer()
         vectors = vectorizer.fit_transform(comment_texts)  # Pass list of strings, not tuples
         similarity_matrix = cosine_similarity(vectors)
-        avg_similarity = (similarity_matrix.sum() - len(comment_texts)) / (len(comment_texts) * (len(comment_texts) - 1))
-        
+        avg_similarity = (similarity_matrix.sum() - len(comment_texts)) / (
+                    len(comment_texts) * (len(comment_texts) - 1))
+
         inverted_score = 1 - avg_similarity  # **Invert the score so lower redundancy = higher score**
         return max(0.0, min(inverted_score, 1.0))  # Ensure score stays between 0 and 1
 
     @staticmethod
-    def check_conciseness(comments: List[str], verbose_threshold: int = 20) -> float:
+    def compute_conciseness(comments: List[str], verbose_threshold: int = 20) -> float:
         """
         Detect overly verbose comments by computing the percentage of comments with a word count
         above the provided threshold.
@@ -280,7 +283,7 @@ class CodeMetrics:
         """
         Evaluate the relevance of a comment by comparing its semantic similarity to the corresponding code snippet.
         Uses a pre-trained BERT-based model (Sentence-BERT) to compute similarity scores.
-        
+
         :param comment: The comment text.
         :param code_snippet: The corresponding code line.
         :return: The cosine similarity score (between 0 and 1).
@@ -289,6 +292,16 @@ class CodeMetrics:
         code_embedding = CodeMetrics.model.encode(code_snippet, convert_to_tensor=True)
         similarity = util.pytorch_cos_sim(comment_embedding, code_embedding)
         return similarity.item()
+
+    @staticmethod
+    def compute_accuracy_scores(inline_comments: List[Tuple[int, str]], code_lines: List[str]) -> float:
+        accuracy_scores = []
+        for line_no, comment in inline_comments:
+            if 1 <= line_no <= len(code_lines):
+                code_line = code_lines[line_no - 1]
+                accuracy_scores.append(CodeMetrics.evaluate_accuracy(comment, code_line))
+        return np.mean(accuracy_scores) if accuracy_scores else 0.0
+
 
 # =============================================================================
 # Aggregate Scoring
@@ -433,7 +446,6 @@ class MetricsDisplay:
 # =============================================================================
 # File and Project Analysis
 # =============================================================================
-# noinspection DuplicatedCode
 class CodeAnalyzer:
     @staticmethod
     def analyze_code(code: str, identifier: str = "unknown") -> Dict[str, Any]:
@@ -452,16 +464,10 @@ class CodeAnalyzer:
         readability = CodeMetrics.compute_readability_scores(all_comments)
         docstring = docstrings[0] if docstrings else ""
 
-        completeness = CodeMetrics.check_completeness(code, docstring)
+        completeness = CodeMetrics.compute_completeness(code, docstring)
         redundancy = CodeMetrics.compute_redundancy(inline_comments, code_lines)
-        conciseness = CodeMetrics.check_conciseness(all_comments)
-
-        accuracy_scores = []
-        for line_no, comment in inline_comments:
-            if 1 <= line_no <= len(code_lines):
-                code_line = code_lines[line_no - 1]
-                accuracy_scores.append(CodeMetrics.evaluate_accuracy(comment, code_line))
-        accuracy = np.mean(accuracy_scores) if accuracy_scores else 0.0
+        conciseness = CodeMetrics.compute_conciseness(all_comments)
+        accuracy = CodeMetrics.compute_accuracy_scores(inline_comments, code_lines)
 
         line_count = sum(1 for line in code_lines if line.strip())
 
