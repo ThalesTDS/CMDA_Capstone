@@ -23,7 +23,7 @@ METRICS_LIST = [
     "overall_score"
 ]
 
-
+model = SentenceTransformer("all-MiniLM-L6-v2")
 # =============================================================================
 # Code Parsing & Extraction
 # =============================================================================
@@ -267,17 +267,56 @@ class CodeMetrics:
         return max(0.0, min(inverted_score, 1.0))  # Ensure score stays between 0 and 1
 
     @staticmethod
-    def compute_conciseness(comments: List[str], verbose_threshold: int = 20) -> float:
+    def compute_conciseness(comments: List[str], verbose_threshold: int = 20, similarity_threshold: float = .70) -> float:
         """
-        Detect overly verbose comments by computing the percentage of comments with a word count
-        above the provided threshold.
+        Detect how concise comments are using similarity and wordy sentences. Sentences are considered wordy if they
+        pass a designated threshold and the same follows for similarity. By default, verbose threshold is 20 words in a sentence,
+        and similarity is .50. If the score is high, than conciseness is worse and vice versa. Therefore, we compute the concisenes by
+        dividing our weighted score with a maximum score. We subtract it from 1. This way, we have a score between 0 and 1, with a lower score
+        being a worse level of conciseness
 
         :param comments: List of comment strings.
         :param verbose_threshold: Word count threshold to consider a comment as verbose.
         :return: Score between 0 and 1 where 1 means all comments are concise.
         """
-        verbose_count = sum(1 for comment in comments if len(comment.split()) > verbose_threshold)
-        return 1 - (verbose_count / len(comments)) if comments else 1.0
+        embeddings = model.encode(comments)
+        similarities = model.similarity(embeddings, embeddings).numpy() # since similarity() returns a tensor object, we want a 2D array for simplicity
+        
+        """
+            This algorithm is a bit tricky to understand, but I will walk you through. Our similarity scores is a tensor matrix. To simplify
+            its usage, I turned it into a numpy array that 2-D. Since we have n sentences, our matrix is n by n. To check if each sentence
+            passes our similarity and verbose threshold, I iterate through a row, with our anchor sentence being the col at the same index
+            as row. So, if are are row 0, then we start from col 0. If we are at row 3, we iterate through the row starting at col 3. Initially
+            we set our anchor before the loop to make things easier. If each similarity score is above our threshold, we have only gone
+            through the first row and are done. If a sentence is below the threshold, we use that sentence as the new anchor point by moving
+            to its corresponding index within the column. Then, we start from that index and continue iterating through the columns
+
+        """
+        ncols = len(similarities) # aour 2D array is a square matrix, so we only need length of one dimension
+        row = 0
+        
+        verbose_count = 0
+        if (len(comments[0]) > verbose_threshold):
+            verbose_count = 1
+
+        
+        similar_count = 0
+        for col in range(1, ncols):
+            
+            if (similarities[row, col] >= similarity_threshold):
+                similar_count += 1
+                
+            else:
+                row = col # move to the next anchor sentence's row index
+            if (len(comments[col]) > verbose_threshold):
+                verbose_count += 1
+                
+        
+        score = .75*verbose_count + .25*similar_count
+        
+        dim = len(comments)*len(comments)
+        
+        return 1 - (score / dim)
 
     @staticmethod
     def evaluate_accuracy(comment: str, code_snippet: str) -> float:
