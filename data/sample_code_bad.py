@@ -1,19 +1,20 @@
-# woof wooif bark bark
+# BAD COMMENTS VERSION
 
-def add(a, b):
-    """m,mnxcv,nmxvcm,n."""
-    # sdfsdfsdfsdf
-    return a + b
-
-class Calculator:
+def binary_search(arr, target):
     """
-    34653efgdfg
+    This function does searching stuff.
     """
-    def multiply(self, a, b):
-        # uiotyuip
-        result = a * b  # cvxxcvb
-        return result
+    left = 0  # start
+    right = len(arr) - 1  # end
 
-def undocumented_function(x):
-    # 6749476478
-    return x * 2
+    while left <= right:
+        mid = (left + right) // 2  # get average
+
+        if arr[mid] == target:
+            return mid  # success
+        elif arr[mid] < target:
+            left = mid + 1  # go up
+        else:
+            right = mid - 1  # go down
+
+    return -1  # nothing found

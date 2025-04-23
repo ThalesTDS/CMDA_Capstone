@@ -1,35 +1,27 @@
-# This module provides basic arithmetic operations through functions and a Calculator class.
+# GOOD COMMENTS VERSION
 
-def add(a: float, b: float) -> float:
+def binary_search(arr, target):
     """
-    Adds two numbers and returns the result.
+    Perform binary search to locate the index of a target value in a sorted list.
 
     Parameters:
-        a (float): The first number.
-        b (float): The second number.
+        arr (list of int): A list sorted in ascending order.
+        target (int): The value to search for.
 
     Returns:
-        float: The sum of the two numbers.
+        int: The index of the target if found, otherwise -1.
     """
-    return a + b
+    left = 0  # Initialize the left boundary of the search range
+    right = len(arr) - 1  # Initialize the right boundary of the search range
 
-class Calculator:
-    """
-    A simple calculator class for performing basic arithmetic operations.
+    while left <= right:
+        mid = (left + right) // 2  # Find the middle index between left and right
 
-    Methods:
-        multiply(a, b): Multiplies two numbers and returns the result.
-    """
+        if arr[mid] == target:
+            return mid  # Target found at the middle index
+        elif arr[mid] < target:
+            left = mid + 1  # Narrow search to the right half
+        else:
+            right = mid - 1  # Narrow search to the left half
 
-    def multiply(self, a: float, b: float) -> float:
-        """
-        Multiplies two numbers and returns the result.
-
-        Parameters:
-            a (float): The first number.
-            b (float): The second number.
-
-        Returns:
-            float: The product of the two numbers.
-        """
-        return a * b
+    return -1  # Target not found in the list
