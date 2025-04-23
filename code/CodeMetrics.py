@@ -4,8 +4,8 @@ from typing import List, Tuple
 import docstring_parser
 import numpy as np
 from sentence_transformers import util
-
-from globals import model
+from nltk.tokenize import sent_tokenize
+from globals import model, DOC_TAG_PATTERN
 
 
 # =============================================================================
@@ -137,7 +137,7 @@ class CodeMetrics:
         function_doc_pairs = CodeMetrics.get_function_doc_pairs(code)
         if not function_doc_pairs:
             # TODO: raise RuntimeError(f"Function docstring pairs not found in code: {code}") if preinput parsing
-            return 1.0  # No functions = nothing to document
+            return 0.0
 
         scores = []
         for func_node, docstring in function_doc_pairs:
@@ -145,6 +145,16 @@ class CodeMetrics:
             scores.append(score)
 
         return sum(scores) / len(scores)
+
+    @staticmethod
+    def extract_description_text(docstring: str) -> str:
+        """
+        Extracts the free-text part of the docstring before any doc section tags.
+        """
+        match = DOC_TAG_PATTERN.search(docstring)
+        if match:
+            return docstring[:match.start()].strip()
+        return docstring.strip()
 
     @staticmethod
     def compute_conciseness(docstrings: List[str], verbose_threshold: int = 20,
@@ -157,7 +167,7 @@ class CodeMetrics:
        (based on cosine similarity ≥ `similarity_threshold`). Only sequential comparisons are made.
 
        The final score penalizes verbosity (75%) and local redundancy (25%), and normalizes
-       the penalty to return a score between 0 and 1, where 1 means fully concise.
+       the penalty to return a score between 0 and 1, where 1 means ideally concise.
 
        :param docstrings: List of docstrings.
        :param verbose_threshold: Maximum acceptable word count for a single comment.
@@ -167,28 +177,45 @@ class CodeMetrics:
 
         if not docstrings or len(docstrings) == 0:
             # TODO: raise RuntimeError(f"Docstrings not found in code: {docstrings}") if preinput parsing
-            return 1.0
+            return 0.0
+
+        # Stop considering docstrings once tags are found (description ended)
+        parsed_docstring_descriptions = [
+            CodeMetrics.extract_description_text(doc).strip()
+            for doc in docstrings
+        ]
+        # Remove empty descriptions
+        filtered_descriptions = [desc for desc in parsed_docstring_descriptions if desc.strip()]
+        if not filtered_descriptions:
+            # TODO: raise RuntimeError(f"Docstrings all empty in code: {docstrings}") if preinput parsing
+            return 0.0
 
         # Count verbose comments
-        verbose_count = sum(1 for sentence in docstrings if len(sentence.split()) > verbose_threshold)
+        verbose_count = 0
+        for desc in filtered_descriptions:
+            sentences = sent_tokenize(desc)
+            for s in sentences:
+                if len(s.split()) > verbose_threshold:
+                    verbose_count += 1
 
-        embeddings = model.encode(docstrings)
+        embeddings = model.encode(filtered_descriptions)
         similarities = model.similarity(embeddings, embeddings).numpy()
         # since similarity() returns a tensor object, we want a 2D array for simplicity
 
         row = 0
         similar_count = 0
-        for col in range(1, len(similarities)):
+        for col in range(1, len(filtered_descriptions)):
             if similarities[row, col] >= similarity_threshold:
                 similar_count += 1
             else:
                 row = col  # move to the next anchor sentence's row index
 
         # Score computation
-        score = 0.75 * verbose_count + 0.25 * similar_count
-        max_score = 0.75 * len(docstrings) + 0.25 * (len(docstrings) - 1)
+        penalty = 0.75 * verbose_count + 0.25 * similar_count
+        max_penalty = len(filtered_descriptions) - 0.25
+        #            = 0.75 * len(docstrings) + 0.25 * (len(docstrings) - 1)
 
-        return 1 - (score / max_score)
+        return 1 - (penalty / max_penalty)
 
     @staticmethod
     def evaluate_accuracy(comment: str, code_snippet: str) -> float:
