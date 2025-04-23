@@ -1,12 +1,11 @@
 import ast
 from typing import List, Tuple
 
+import docstring_parser
 import numpy as np
 from sentence_transformers import util
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+
 from globals import model
-import docstring_parser
 
 
 # =============================================================================
@@ -89,16 +88,16 @@ class CodeMetrics:
             # Weights: 40% desc, 30% params, 30% return
             score = 0.0
             if has_desc:
-                print("has_desc")
+                # print("has_desc") testing flags
                 score += 0.4
             if param_names and has_all_params:
-                print("has_all_params")
+                # print("has_all_params") testing flags
                 score += 0.3
             if has_return_annot and has_return_doc:
-                print("has_return_annot and has_return_doc")
+                # print("has_return_annot and has_return_doc") testing flags
                 score += 0.3
             elif not has_return_annot:
-                print("no return found")
+                # print("no return found") testing flags
                 score += 0.3  # Return not expected, grant credit
 
             return score
@@ -137,7 +136,7 @@ class CodeMetrics:
         """
         function_doc_pairs = CodeMetrics.get_function_doc_pairs(code)
         if not function_doc_pairs:
-            # raise RuntimeError(f"Function docstring pairs not found in code: {code}") if preinput parsing
+            # TODO: raise RuntimeError(f"Function docstring pairs not found in code: {code}") if preinput parsing
             return 1.0  # No functions = nothing to document
 
         scores = []
@@ -147,78 +146,49 @@ class CodeMetrics:
 
         return sum(scores) / len(scores)
 
-
-
     @staticmethod
-    def compute_similarity(text1: str, text2: str) -> float:
-        """
-        Compute the cosine similarity between two texts using TF-IDF.
-
-        :param text1: The first text string.
-        :param text2: The second text string.
-        :return: Cosine similarity score between 0 and 1. Returns 0 if either text is empty.
-        """
-        if not text1.strip() or not text2.strip():
-            return 0.0
-        try:
-            vectorizer = TfidfVectorizer()
-            vectors = vectorizer.fit_transform([text1, text2])
-            sim_matrix = cosine_similarity(vectors)
-            return sim_matrix[0, 1]
-        except ValueError:
-            return 0.0
-
-    @staticmethod
-    def compute_conciseness(comments: List[str], verbose_threshold: int = 20,
+    def compute_conciseness(docstrings: List[str], verbose_threshold: int = 20,
                             similarity_threshold: float = .70) -> float:
         """
-        Detect how concise comments are using similarity and wordy sentences. Sentences are considered wordy if they
-        pass a designated threshold and the same follows for similarity. By default, verbose threshold is 20 words in a sentence,
-        and similarity is .50. If the score is high, then conciseness is worse and vice versa. Therefore, we compute the conciseness by
-        dividing our weighted score with a maximum score. We subtract it from 1. This way, we have a score between 0 and 1, with a lower score
-        being a worse level of conciseness
+       Compute the conciseness score of a list of docstrings.
 
-        :param comments: List of comment strings.
-        :param verbose_threshold: Word count threshold to consider a comment as verbose.
-        :return: Score between 0 and 1 where 1 means all comments are concise.
-        """
-        embeddings = model.encode(comments)
-        similarities = model.similarity(embeddings,
-                                        embeddings).numpy()  # since similarity() returns a tensor object, we want a 2D array for simplicity
+       A sentence is considered verbose if it exceeds `verbose_threshold` words.
+       A sentence is considered redundant if it is too similar to a preceding comment
+       (based on cosine similarity ≥ `similarity_threshold`). Only sequential comparisons are made.
 
-        """
-            This algorithm is a bit tricky to understand, but I will walk you through. Our similarity scores is a tensor matrix. To simplify
-            its usage, I turned it into a numpy array that 2-D. Since we have n sentences, our matrix is n by n. To check if each sentence
-            passes our similarity and verbose threshold, I iterate through a row, with our anchor sentence being the col at the same index
-            as row. So, if are are row 0, then we start from col 0. If we are at row 3, we iterate through the row starting at col 3. Initially
-            we set our anchor before the loop to make things easier. If each similarity score is above our threshold, we have only gone
-            through the first row and are done. If a sentence is below the threshold, we use that sentence as the new anchor point by moving
-            to its corresponding index within the column. Then, we start from that index and continue iterating through the columns
+       The final score penalizes verbosity (75%) and local redundancy (25%), and normalizes
+       the penalty to return a score between 0 and 1, where 1 means fully concise.
 
-        """
-        ncols = len(similarities)  # our 2D array is a square matrix, so we only need length of one dimension
+       :param docstrings: List of docstrings.
+       :param verbose_threshold: Maximum acceptable word count for a single comment.
+       :param similarity_threshold: Cosine similarity threshold for considering two comments redundant.
+       :return: A score between 0 (not concise) and 1 (ideally concise).
+       """
+
+        if not docstrings or len(docstrings) == 0:
+            # TODO: raise RuntimeError(f"Docstrings not found in code: {docstrings}") if preinput parsing
+            return 1.0
+
+        # Count verbose comments
+        verbose_count = sum(1 for sentence in docstrings if len(sentence.split()) > verbose_threshold)
+
+        embeddings = model.encode(docstrings)
+        similarities = model.similarity(embeddings, embeddings).numpy()
+        # since similarity() returns a tensor object, we want a 2D array for simplicity
+
         row = 0
-
-        verbose_count = 0
-        if len(comments[0]) > verbose_threshold:
-            verbose_count = 1
-
         similar_count = 0
-        for col in range(1, ncols):
-
+        for col in range(1, len(similarities)):
             if similarities[row, col] >= similarity_threshold:
                 similar_count += 1
-
             else:
                 row = col  # move to the next anchor sentence's row index
-            if len(comments[col]) > verbose_threshold:
-                verbose_count += 1
 
-        score = .75 * verbose_count + .25 * similar_count
+        # Score computation
+        score = 0.75 * verbose_count + 0.25 * similar_count
+        max_score = 0.75 * len(docstrings) + 0.25 * (len(docstrings) - 1)
 
-        dim = len(comments) * len(comments)
-
-        return 1 - (score / dim)
+        return 1 - (score / max_score)
 
     @staticmethod
     def evaluate_accuracy(comment: str, code_snippet: str) -> float:
@@ -230,6 +200,9 @@ class CodeMetrics:
         :param code_snippet: The corresponding code line.
         :return: The cosine similarity score (between 0 and 1).
         """
+        if not comment or not code_snippet:
+            # TODO: raise RuntimeError(f"Comment or code snippet not found: {comment}, {code_snippet}") if preinput parsing
+            return 0.0
         comment_embedding = model.encode(comment, convert_to_tensor=True)
         code_embedding = model.encode(code_snippet, convert_to_tensor=True)
         similarity = util.pytorch_cos_sim(comment_embedding, code_embedding)

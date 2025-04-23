@@ -17,11 +17,10 @@ class CodeAnalyzer:
         """
         code_lines = code.splitlines()
         inline_comments, docstrings = CodeParser.extract_comments(code)
-        all_comments = [comment for _, comment in inline_comments] + docstrings
 
         density = CodeMetrics.compute_comment_density(code, inline_comments, docstrings)
         completeness = CodeMetrics.compute_completeness(code)
-        conciseness = CodeMetrics.compute_conciseness(all_comments)
+        conciseness = CodeMetrics.compute_conciseness(docstrings)
         accuracy = CodeMetrics.compute_accuracy_scores(inline_comments, code_lines)
 
         line_count = sum(1 for line in code_lines if line.strip())
