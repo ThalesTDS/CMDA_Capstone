@@ -6,6 +6,7 @@ from sentence_transformers import util
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from globals import model
+import docstring_parser
 
 
 # =============================================================================
@@ -66,62 +67,87 @@ class CodeMetrics:
                 return (max_ratio - ratio) / (max_ratio - ideal_high)
 
     @staticmethod
-    def compute_completeness(code: str, docstring: str) -> float:
+    def assess_function_completeness(func_node: ast.FunctionDef, docstring: str) -> float:
         """
-        Check if the docstring contains required elements based on function/class definition.
+        Compute the completeness score for a single function and its docstring.
+        """
+        try:
+            parsed = docstring_parser.parse(docstring)
 
-        :param code: The full source code containing the function/class.
-        :param docstring: The function/class docstring.
-        :return: A completeness score between 0 (incomplete) and 1 (fully complete).
-        """
-        if not docstring:
+            # General description (minimum 2 words)
+            has_desc = parsed.short_description is not None and len(parsed.short_description.split()) >= 2
+
+            # Parameters
+            param_names = [arg.arg for arg in func_node.args.args if arg.arg not in ("self", "cls")]
+            doc_param_names = {p.arg_name for p in parsed.params}
+            has_all_params = all(name in doc_param_names for name in param_names)
+
+            # Return
+            has_return_annot = func_node.returns is not None
+            has_return_doc = parsed.returns is not None if has_return_annot else True
+
+            # Weights: 40% desc, 30% params, 30% return
+            score = 0.0
+            if has_desc:
+                print("has_desc")
+                score += 0.4
+            if param_names and has_all_params:
+                print("has_all_params")
+                score += 0.3
+            if has_return_annot and has_return_doc:
+                print("has_return_annot and has_return_doc")
+                score += 0.3
+            elif not has_return_annot:
+                print("no return found")
+                score += 0.3  # Return not expected, grant credit
+
+            return score
+
+        except Exception as e:
+            print("Docstring parsing error in assess_function_completeness:", e)
             return 0.0
 
+    @staticmethod
+    def get_function_doc_pairs(code: str) -> List[Tuple[ast.FunctionDef, str]]:
+        """
+        Extract (function_node, docstring) pairs from source code.
+        """
+        pairs = []
         try:
             tree = ast.parse(code)
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):  # Check function definitions
-                    param_names = [arg.arg for arg in node.args.args if arg.arg not in ("self", "cls")]
-                    has_return = isinstance(node.returns, ast.Name)  # Checks if a return type is declared
+                if isinstance(node, ast.FunctionDef):
+                    doc = ast.get_docstring(node)
+                    if doc:
+                        pairs.append((node, doc))
+        except Exception as e:
+            print("AST parsing error in get_function_doc_pairs:", e)
+        return pairs
 
-                    needs_param = len(param_names) > 0  # Function requires @param if it has parameters
-                    needs_return = has_return  # Function requires @return if return type exists
+    @staticmethod
+    def compute_completeness(code: str) -> float:
+        """
+        Check if the docstring contains required elements based on function/class definition.
+        Supports the following Docstring Formats:
+            ReStructured Text (reST), Google, NumPy/SciPy, EpYtext
+        DOES NOT support the combination of the above.
 
-                    # Check if the docstring contains necessary components
-                    has_param_doc = all(
-                        f"@param {param}" in docstring for param in param_names) if needs_param else True
-                    has_return_doc = "@return" in docstring if needs_return else True
-                    has_general_desc = len(
-                        docstring.strip().split("\n")[0].split()) > 5  # At least 5 words in first line
+        :param code: The full source code containing the function/class.
+        :return: A completeness score between 0 (incomplete) and 1 (fully complete).
+        """
+        function_doc_pairs = CodeMetrics.get_function_doc_pairs(code)
+        if not function_doc_pairs:
+            # raise RuntimeError(f"Function docstring pairs not found in code: {code}") if preinput parsing
+            return 1.0  # No functions = nothing to document
 
-                    # Calculate completeness score
-                    completeness_score = 0.0
-                    if has_general_desc:
-                        completeness_score += 0.5  # General description contributes 50%
-                    if needs_param and has_param_doc:
-                        completeness_score += 0.25  # Parameter documentation is 25%
-                    if needs_return and has_return_doc:
-                        completeness_score += 0.25  # Return documentation is 25%
+        scores = []
+        for func_node, docstring in function_doc_pairs:
+            score = CodeMetrics.assess_function_completeness(func_node, docstring)
+            scores.append(score)
 
-                        # Check if the docstring contains a general description (not just `@param` and `@return`)
-                        docstring_lines = docstring.strip().split("\n")
-                        first_line = docstring_lines[0].strip() if docstring_lines else ""
-                        has_general_description = len(first_line.split()) > 5  # Requires at least 5 words
+        return sum(scores) / len(scores)
 
-                        # Calculate completeness score
-                        completeness_score = 0.0
-                        if has_general_description:
-                            completeness_score += 0.4  # General description carries 40% weight
-                        if needs_param and "@param" in docstring:
-                            completeness_score += 0.3  # Params contribute 30% to completeness
-                        if needs_return and "@return" in docstring:
-                            completeness_score += 0.3  # Return doc contributes 30%
 
-                        return completeness_score
-        except SyntaxError:
-            return 0.0  # Fallback in case of syntax issues
-
-        return 1.0  # Default case (should never reach here)
 
     @staticmethod
     def compute_similarity(text1: str, text2: str) -> float:

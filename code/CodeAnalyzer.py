@@ -20,9 +20,7 @@ class CodeAnalyzer:
         all_comments = [comment for _, comment in inline_comments] + docstrings
 
         density = CodeMetrics.compute_comment_density(code, inline_comments, docstrings)
-        docstring = docstrings[0] if docstrings else ""
-
-        completeness = CodeMetrics.compute_completeness(code, docstring)
+        completeness = CodeMetrics.compute_completeness(code)
         conciseness = CodeMetrics.compute_conciseness(all_comments)
         accuracy = CodeMetrics.compute_accuracy_scores(inline_comments, code_lines)
 
