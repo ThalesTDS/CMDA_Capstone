@@ -1,3 +1,5 @@
 .venv
 .idea
 /legacy/DocuMetrics_V1.py
+__pycache__
+/code/__pycache__
