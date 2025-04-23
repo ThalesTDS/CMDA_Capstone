@@ -42,8 +42,28 @@ def main():
     """
     Main routine to analyze a directory of Python files and display the results.
     """
+    import pandas as pd
+    import os
+
     dataset_directory = FileLoader.get_dir_path()
-    ProjectAnalyzer.analyze_directory(dataset_directory)
+    file_results = FileLoader.load_dataset(dataset_directory)  # ← Load + analyze each file
+
+    # Create exports folder if it doesn't exist
+    os.makedirs("exports", exist_ok=True)
+
+    # Convert file-level metrics
+    df_file_metrics = pd.DataFrame(file_results)
+    df_file_metrics["level"] = "file"
+
+    # Convert project-level metrics
+    project_metrics = ScoreAggregator.aggregate_project_score(file_results)
+    df_project_metrics = pd.DataFrame([project_metrics])
+    df_project_metrics["level"] = "project"
+
+    # Combine both into one file
+    combined_df = pd.concat([df_file_metrics, df_project_metrics], ignore_index=True)
+    combined_df.to_csv("exports/all_metrics_combined.csv", index=False)
+
 
 
 if __name__ == "__main__":
