@@ -7,7 +7,6 @@ from typing import List, Tuple, Dict, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from textstat import textstat
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
@@ -15,9 +14,7 @@ from sentence_transformers import SentenceTransformer, util
 # Global metric list used for aggregation and display.
 METRICS_LIST = [
     "comment_density",
-    "readability",
     "completeness",
-    "redundancy",
     "conciseness",
     "accuracy",
     "overall_score"
@@ -135,34 +132,6 @@ class CodeMetrics:
                 return (max_ratio - ratio) / (max_ratio - ideal_high)
 
     @staticmethod
-    def compute_readability_scores(comments: List[str]) -> float:
-        """
-        Compute the average readability score for a list of comments using multiple readability metrics.
-        (Flesch, FK Grade, Dale-Chall, ARI)
-        :param comments: List of comment strings.
-        :return: Normalized readability score between 0 (hard) and 1 (easy).
-        """
-        if not comments:
-            return 0.0
-
-        readability_scores = []
-
-        for comment in comments:
-            flesch = textstat.flesch_reading_ease(comment)  # Higher is easier to read
-            ari = textstat.automated_readability_index(comment)  # Lower is better
-
-            # Normalize scores (Flesch is already 0-100, others require scaling)
-            normalized_flesch = np.clip(flesch / 100, 0, 1)
-            normalized_ari = np.clip(1 - (ari / 15), 0, 1)  # ARI typically < 20
-
-            # Combine all scores
-            readability_score = (normalized_flesch + normalized_ari) / 2
-            readability_scores.append(readability_score)
-
-        # Return average readability score
-        return float(np.mean(readability_scores))
-
-    @staticmethod
     def compute_completeness(code: str, docstring: str) -> float:
         """
         Check if the docstring contains required elements based on function/class definition.
@@ -240,38 +209,11 @@ class CodeMetrics:
             return 0.0
 
     @staticmethod
-    def compute_redundancy(inline_comments: list) -> float:
-        """
-        Compute redundancy by checking if inline comments repeat similar information as other comments.
-        Uses TF-IDF (Term Frequency-Inverse Document Frequency) to convert comments into
-            numerical vectors based on word importance.
-        Then, cosine similarity is used to measure how similar the comments are to one another,
-            helping detect repetitive documentation.
-
-        :param inline_comments: List of tuples (line number, inline comment text).
-        :return: Redundancy score between 0 and 1.
-        """
-        if not inline_comments or len(inline_comments) == 1:
-            return 1.0
-
-        # Extract only the comment text (ignore line numbers)
-        comment_texts = [comment[1] for comment in inline_comments]
-
-        vectorizer = TfidfVectorizer()
-        vectors = vectorizer.fit_transform(comment_texts)  # Pass list of strings, not tuples
-        similarity_matrix = cosine_similarity(vectors)
-        avg_similarity = (similarity_matrix.sum() - len(comment_texts)) / (
-                    len(comment_texts) * (len(comment_texts) - 1))
-
-        inverted_score = 1 - avg_similarity  # **Invert the score so lower redundancy = higher score**
-        return max(0.0, min(inverted_score, 1.0))  # Ensure score stays between 0 and 1
-
-    @staticmethod
     def compute_conciseness(comments: List[str], verbose_threshold: int = 20, similarity_threshold: float = .70) -> float:
         """
         Detect how concise comments are using similarity and wordy sentences. Sentences are considered wordy if they
         pass a designated threshold and the same follows for similarity. By default, verbose threshold is 20 words in a sentence,
-        and similarity is .50. If the score is high, than conciseness is worse and vice versa. Therefore, we compute the concisenes by
+        and similarity is .50. If the score is high, then conciseness is worse and vice versa. Therefore, we compute the conciseness by
         dividing our weighted score with a maximum score. We subtract it from 1. This way, we have a score between 0 and 1, with a lower score
         being a worse level of conciseness
 
@@ -292,29 +234,29 @@ class CodeMetrics:
             to its corresponding index within the column. Then, we start from that index and continue iterating through the columns
 
         """
-        ncols = len(similarities) # aour 2D array is a square matrix, so we only need length of one dimension
+        ncols = len(similarities) # our 2D array is a square matrix, so we only need length of one dimension
         row = 0
         
         verbose_count = 0
-        if (len(comments[0]) > verbose_threshold):
+        if len(comments[0]) > verbose_threshold:
             verbose_count = 1
 
         
         similar_count = 0
         for col in range(1, ncols):
             
-            if (similarities[row, col] >= similarity_threshold):
+            if similarities[row, col] >= similarity_threshold:
                 similar_count += 1
                 
             else:
                 row = col # move to the next anchor sentence's row index
-            if (len(comments[col]) > verbose_threshold):
+            if len(comments[col]) > verbose_threshold:
                 verbose_count += 1
                 
         
         score = .75*verbose_count + .25*similar_count
         
-        dim = len(comments)*len(comments)
+        dim = len(comments) * len(comments)
         
         return 1 - (score / dim)
 
@@ -349,12 +291,10 @@ class CodeMetrics:
 class ScoreAggregator:
     # Global adjustable weights; must sum to 1.
     WEIGHTS: Dict[str, float] = {
-        "comment_density": 1 / 6,
-        "readability": 1 / 6,
-        "completeness": 1 / 6,
-        "redundancy": 1 / 6,
-        "conciseness": 1 / 6,
-        "accuracy": 1 / 6
+        "comment_density": 1 / 4,
+        "completeness": 1 / 4,
+        "conciseness": 1 / 4,
+        "accuracy": 1 / 4
     }
 
     @staticmethod
@@ -395,9 +335,7 @@ class ScoreAggregator:
 
         aggregated_metrics: Dict[str, Any] = {
             "comment_density": 0.0,
-            "readability": 0.0,
             "completeness": 0.0,
-            "redundancy": 0.0,
             "conciseness": 0.0,
             "accuracy": 0.0,
             "overall_score": 0.0,
@@ -436,20 +374,18 @@ class MetricsDisplay:
 
         # Separate overall score from individual metrics.
         overall_score = all_metrics.pop("overall_score", None)
-        metric_keys = list(all_metrics.keys())
-        n_metrics = len(metric_keys)
-
-        ncols = 3 if n_metrics > 0 else 1
-        nrows = int(np.ceil(n_metrics / ncols))
-
         assert overall_score is not None, "Overall score must be computed."
 
-        fig = plt.figure(figsize=(3 * ncols, 3 * (nrows + 1)))
-        gs = gridspec.GridSpec(nrows + 1, ncols, height_ratios=[1] * nrows + [0.6])
+        metric_keys = list(all_metrics.keys())
+
+        fig = plt.figure(figsize=(6, 9))
+        gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 0.6])
         cmap = plt.get_cmap("RdYlGn")
 
         for i, key in enumerate(metric_keys):
-            ax = fig.add_subplot(gs[i])
+            row = i // 2
+            col = i % 2
+            ax = fig.add_subplot(gs[row, col])
             val = all_metrics[key]
             color = cmap(val)
             ax.set_facecolor(color)
@@ -461,7 +397,7 @@ class MetricsDisplay:
                 spine.set_visible(False)
 
         # Overall score spanning all columns.
-        ax_score = fig.add_subplot(gs[nrows, :])
+        ax_score = fig.add_subplot(gs[2, :])
         color = cmap(overall_score)
         ax_score.set_facecolor(color)
         ax_score.text(0.5, 0.5, f"Overall: {overall_score:.2f}", fontsize=20, ha="center", va="center", weight="bold")
@@ -501,11 +437,9 @@ class CodeAnalyzer:
         all_comments = [comment for _, comment in inline_comments] + docstrings
 
         density = CodeMetrics.compute_comment_density(code, inline_comments, docstrings)
-        readability = CodeMetrics.compute_readability_scores(all_comments)
         docstring = docstrings[0] if docstrings else ""
 
         completeness = CodeMetrics.compute_completeness(code, docstring)
-        redundancy = CodeMetrics.compute_redundancy(inline_comments)
         conciseness = CodeMetrics.compute_conciseness(all_comments)
         accuracy = CodeMetrics.compute_accuracy_scores(inline_comments, code_lines)
 
@@ -513,9 +447,7 @@ class CodeAnalyzer:
 
         metrics: Dict[str, Any] = {
             "comment_density": density,
-            "readability": readability,
             "completeness": completeness,
-            "redundancy": redundancy,
             "conciseness": conciseness,
             "accuracy": accuracy
         }
