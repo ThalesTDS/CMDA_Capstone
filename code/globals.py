@@ -11,6 +11,27 @@ METRICS_LIST = [
     "overall_score"
 ]
 model = SentenceTransformer("all-MiniLM-L6-v2")
+DOC_TAG_PATTERN = re.compile(
+    r"""
+    ^\s*(
+        :param       |
+        :returns?    |
+        :raises?     |
+        :rtype       |
+        Example[s]?: |
+        Parameters   |
+        Returns      |
+        Raises       |
+        Args         |
+        Kwargs       |
+        Yields       |
+        Attributes   |
+        @param       |
+        @return
+    )
+    """,
+    re.IGNORECASE | re.MULTILINE | re.VERBOSE
+)
 
 
 def trim_file_path(file_path: str) -> str:
