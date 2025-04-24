@@ -1,6 +1,4 @@
 import ast
-import io
-import tokenize
 from typing import List, Tuple, Optional
 
 
@@ -9,24 +7,26 @@ from typing import List, Tuple, Optional
 # =============================================================================
 class CodeParser:
     @staticmethod
-    def extract_comments(code: str) -> Tuple[List[Tuple[int, str]], List[str]]:
+    def extract_comments(code: str) -> Tuple[List[str], List[str], List[int]]:
         """
         Extract inline comments and docstrings from the provided source code.
 
         :param code: The source code as a string.
-        :return: A tuple where the first element is a list of inline comments
-                 (each as a tuple of line number and comment text) and the second
-                 element is a list of docstring texts.
+        :return: A tuple where the first element is a list of inline comments, the second
+                 element is a list of docstring texts, and the third element is a list of comment
+                 and docstring counts.
         """
-        inline_comments = []
-        try:
-            tokens = tokenize.generate_tokens(io.StringIO(code).readline)
-            for token in tokens:
-                if token.type == tokenize.COMMENT:
-                    inline_comments.append((token.start[0], token.string.strip()))
-        except Exception as e:
-            print("Tokenize error:", e)
+        count_comments = 0
+        inline_comment_lines = []
+        for line in code.splitlines():
+            hash_index = line.find('#')
+            if hash_index > 0:
+                before = line[:hash_index]
+                if sum(c.strip() != '' for c in before) >= 3:
+                    inline_comment_lines.append(line.rstrip())
+                    count_comments += 1
 
+        count_docstrings = 0
         docstrings = []
         try:
             tree = ast.parse(code)
@@ -35,10 +35,12 @@ class CodeParser:
                     doc = ast.get_docstring(node)
                     if doc:
                         docstrings.append(doc)
+                        count_docstrings += 1
         except Exception as e:
             print("AST error:", e)
+        counts = [count_comments, count_docstrings]
 
-        return inline_comments, docstrings
+        return inline_comment_lines, docstrings, counts
 
     @staticmethod
     def get_ast(code: str) -> Optional[ast.AST]:

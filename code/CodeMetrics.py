@@ -5,6 +5,9 @@ import docstring_parser
 import numpy as np
 from sentence_transformers import util
 from nltk.tokenize import sent_tokenize
+import nltk
+
+nltk.download('punkt_tab', quiet=True)
 from globals import model, DOC_TAG_PATTERN
 
 
@@ -14,35 +17,56 @@ from globals import model, DOC_TAG_PATTERN
 class CodeMetrics:
 
     @staticmethod
-    def compute_comment_density(code: str,
-                                inline_comments: List[Tuple[int, str]],
-                                docstrings: List[str]) -> float:
+    def compute_comment_density(code_lines: List[str]) -> float:
         """
         Compute the normalized comment density of the source code.
 
-        :param code: The source code as a string.
-        :param inline_comments: List of tuples (line number, inline comment).
-        :param docstrings: List of docstring texts.
+        :param code_lines: The source code as a string.
         :return: Normalized comment density score between 0 and 1.
         """
-        lines = code.splitlines()
-        total_lines = sum(1 for line in lines if line.strip() != "")
+        count_comment_lines = 0
+        count_code_lines = 0
+        in_multiline_string = False
 
-        # Unique inline comment lines.
-        comment_line_numbers = {line_no for line_no, _ in inline_comments}
-        inline_comment_lines = len(comment_line_numbers)
+        for line in code_lines:
+            stripped = line.strip()
+            if not stripped or len(stripped) < 3:
+                continue
 
-        # Count docstring lines.
-        docstring_lines = sum(len(doc.splitlines()) for doc in docstrings)
-        total_comment_lines = inline_comment_lines + docstring_lines
-        density = total_comment_lines / total_lines if total_lines > 0 else 0
+            # Detect triple-quoted strings used as comments (docstrings or blocks)
+            if stripped.startswith(("'''", '"""')):
+                if in_multiline_string:
+                    count_comment_lines += 1
+                    in_multiline_string = False
+                else:
+                    count_comment_lines += 1
+                    if stripped.count('"""') == 1 or stripped.count("'''") == 1:
+                        in_multiline_string = True
+                continue
+            elif in_multiline_string:
+                count_comment_lines += 1
+                continue
+
+            if stripped.startswith('#'):
+                count_comment_lines += 1
+            elif '#' in stripped:
+                count_comment_lines += 1
+                count_code_lines += 1
+            else:
+                count_code_lines += 1
+
+        total_relevant_lines = count_code_lines + count_comment_lines
+        if total_relevant_lines == 0:
+            raise ValueError("No comment or code lines found in the code. call: CodeMetrics.compute_comment_density")
+        density = (count_comment_lines / total_relevant_lines)
+        print(f"Comment Density: {density:.2f} ({count_comment_lines}/{total_relevant_lines})")
 
         return CodeMetrics.normalize_comment_density(density)
 
     @staticmethod
     def normalize_comment_density(ratio: float,
                                   ideal_low: float = 0.1,
-                                  ideal_high: float = 0.3,
+                                  ideal_high: float = 0.35,
                                   max_ratio: float = 1.0) -> float:
         """
         Normalize the comment density ratio into a quality score between 0 and 1.
@@ -228,18 +252,17 @@ class CodeMetrics:
         :return: The cosine similarity score (between 0 and 1).
         """
         if not comment or not code_snippet:
-            # TODO: raise RuntimeError(f"Comment or code snippet not found: {comment}, {code_snippet}") if preinput parsing
-            return 0.0
+            raise RuntimeError(f"Comment or code snippet not found: {comment}, {code_snippet}")
         comment_embedding = model.encode(comment, convert_to_tensor=True)
         code_embedding = model.encode(code_snippet, convert_to_tensor=True)
         similarity = util.pytorch_cos_sim(comment_embedding, code_embedding)
         return similarity.item()
 
     @staticmethod
-    def compute_accuracy_scores(inline_comments: List[Tuple[int, str]], code_lines: List[str]) -> float:
+    def compute_accuracy_scores(inline_comments: List[str]) -> float:
         accuracy_scores = []
-        for line_no, comment in inline_comments:
-            if 1 <= line_no <= len(code_lines):
-                code_line = code_lines[line_no - 1]
-                accuracy_scores.append(CodeMetrics.evaluate_accuracy(comment, code_line))
+        for line in inline_comments:
+            code_part, comment_part = line.split('#', 1)
+            accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, comment_part))
+            print(f"Code Line: {code_part} Comment: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
         return np.mean(accuracy_scores) if accuracy_scores else 0.0
