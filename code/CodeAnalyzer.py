@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional
-from CodeParser import CodeParser
+
 from CodeMetrics import CodeMetrics
+from CodeParser import CodeParser
 from ScoreAggregator import ScoreAggregator
 from globals import trim_file_path
 
@@ -17,7 +18,6 @@ class CodeAnalyzer:
         enough comments or docstrings to be evaluated.
         """
         code_lines = code.splitlines()
-        assert len(code_lines) > 0, "Code lines should not be empty"
         inline_comments, docstrings, counts = CodeParser.extract_comments(code)
 
         # As of now we require 4 comments and 2 docstrings to be present in the code to be evaluated
@@ -55,7 +55,7 @@ class CodeAnalyzer:
         :return: Dictionary with computed metrics, or None if reading fails.
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8-sig") as f:
                 code = f.read()
         except Exception as e:
             print(f"Error reading {file_path}: {e}")

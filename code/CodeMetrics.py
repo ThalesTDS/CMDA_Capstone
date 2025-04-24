@@ -1,14 +1,15 @@
 import ast
+import warnings
 from typing import List, Tuple
 
 import docstring_parser
-import numpy as np
-from sentence_transformers import util
-from nltk.tokenize import sent_tokenize
 import nltk
+import numpy as np
+from nltk.tokenize import sent_tokenize
+from sentence_transformers import util
 
 nltk.download('punkt_tab', quiet=True)
-from globals import model, DOC_TAG_PATTERN
+from globals import model, DOC_TAG_PATTERN, debug
 
 
 # =============================================================================
@@ -59,7 +60,8 @@ class CodeMetrics:
         if total_relevant_lines == 0:
             raise ValueError("No comment or code lines found in the code. call: CodeMetrics.compute_comment_density")
         density = (count_comment_lines / total_relevant_lines)
-        print(f"Comment Density: {density:.2f} ({count_comment_lines}/{total_relevant_lines})")
+        if debug:
+            print(f"Comment Density: {density:.2f} ({count_comment_lines}/{total_relevant_lines})")
 
         return CodeMetrics.normalize_comment_density(density)
 
@@ -137,6 +139,8 @@ class CodeMetrics:
         """
         pairs = []
         try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
             tree = ast.parse(code)
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
@@ -252,7 +256,7 @@ class CodeMetrics:
         :return: The cosine similarity score (between 0 and 1).
         """
         if not comment or not code_snippet:
-            raise RuntimeError(f"Comment or code snippet not found: {comment}, {code_snippet}")
+            raise RuntimeError(f"Comment or code snippet not found: Code: {code_snippet}, Comment: {comment}")
         comment_embedding = model.encode(comment, convert_to_tensor=True)
         code_embedding = model.encode(code_snippet, convert_to_tensor=True)
         similarity = util.pytorch_cos_sim(comment_embedding, code_embedding)
@@ -264,5 +268,6 @@ class CodeMetrics:
         for line in inline_comments:
             code_part, comment_part = line.split('#', 1)
             accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, comment_part))
-            print(f"Code Line: {code_part} Comment: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
+            if debug:
+                print(f"Code Line: {code_part} Comment: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
         return np.mean(accuracy_scores) if accuracy_scores else 0.0
