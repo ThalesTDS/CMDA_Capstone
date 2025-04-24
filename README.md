@@ -1,8 +1,7 @@
-# Code Analysis Tool
+# DocuMetrics: Code Documentation Quality Analyzer
 
 ## Overview
-This tool is designed to analyze Python source code files and compute various metrics related to code quality, readability, and documentation. The analysis results can be aggregated at both the file and project levels, providing insights into how well-documented and readable a given codebase is.
-
+DocuMetrics analyzes Python source code for the presence and quality of inline comments and docstrings. It computes documentation-related metrics and provides a composite score for each file and project.
 ## Features
 - Extracts and evaluates inline comments and docstrings.
 - Computes multiple metrics including comment density, readability, completeness, redundancy, conciseness, and accuracy.
@@ -10,73 +9,91 @@ This tool is designed to analyze Python source code files and compute various me
 - Aggregates scores across multiple files for a holistic project assessment.
 - Provides visual representations of metric scores.
 
+---
+
 ## Components
 
 ### **1. Code Parsing & Extraction**
 #### `CodeParser`
-- **`extract_comments(code: str) -> Tuple[List[Tuple[int, str]], List[str]]`**
-  - Extracts inline comments and docstrings from the given source code.
-- **`get_ast(code: str) -> Optional[ast.AST]`**
-  - Parses the code into an Abstract Syntax Tree (AST) for further analysis.
+- **`extract_comments(code: str) -> Tuple[List[str], List[str], List[int]]`**
+  - Extracts inline comments (with ≥3 non-whitespace chars before `#` and ≥4 after) and docstrings from source code.
+  - Returns inline comment lines, extracted docstrings, and their respective counts.
+- **Uses `ast.parse()` with BOM-safe reading and warnings suppressed.**
+
+---
 
 ### **2. Metrics Calculation**
 #### `CodeMetrics`
-- **`compute_comment_density(code, inline_comments, docstrings) -> float`**
-  - Computes the proportion of comment lines to total lines.
-- **`normalize_comment_density(ratio) -> float`**
-  - Normalizes the comment density to a meaningful score.
-- **`compute_readability_scores(comments) -> float`**
-  - Calculates readability using the Flesch Reading Ease score.
-- **`check_completeness(code) -> float`**
-  - Evaluates whether functions and classes have sufficient docstring coverage.
-- **`compute_similarity(text1, text2) -> float`**
-  - Uses TF-IDF and cosine similarity to measure textual similarity.
-- **`compute_redundancy(inline_comments, code_lines) -> float`**
-  - Analyzes redundancy by comparing comments to corresponding code lines.
-- **`check_conciseness(comments, verbose_threshold) -> float`**
-  - Measures conciseness by checking for excessively verbose comments.
-- **`evaluate_accuracy(comment, code_snippet) -> float`**
-  - Compares comment relevance by checking for overlapping tokens with the code.
+- **`compute_comment_density(code_lines: List[str]) -> float`**
+  - Measures the density of comment lines (inline or full-line) relative to code lines.
+- **`normalize_comment_density(ratio: float) -> float`**
+  - Scores density based on an ideal range (0.1 to 0.35) using linear normalization.
+- **`compute_completeness(code: str) -> float`**
+  - Assesses docstring structure (description, parameter coverage, return info) using `docstring_parser`.
+- **`compute_conciseness(docstrings: List[str], verbose_threshold=20, similarity_threshold=0.70) -> float`**
+  - Penalizes verbose and redundant docstrings using token count and cosine similarity (Sentence-BERT).
+- **`evaluate_accuracy(comment: str, code_snippet: str) -> float`**
+  - Compares a comment’s semantic relevance to its associated code using Sentence-BERT.
+- **`compute_accuracy_scores(inline_comments: List[str]) -> float`**
+  - Aggregates accuracy scores for inline comments.
 
-### **3. Aggregate Scoring**
-#### `ScoreAggregator`
-- **`compute_file_score(metrics) -> float`**
-  - Computes an overall weighted score for a single file.
-- **`aggregate_project_score(file_results) -> Dict[str, Any]`**
-  - Aggregates scores across multiple files, weighted by line count.
+---
 
-### **4. Display Functions**
-#### `MetricsDisplay`
-- **`display_metric_grid(metrics) -> None`**
-  - Generates a visual representation of metrics in a grid format.
-
-### **5. File and Project Analysis**
+### **3. File-Level Analysis**
 #### `CodeAnalyzer`
-- **`analyze_code(code, identifier) -> Dict[str, Any]`**
-  - Computes all metrics for a given code snippet.
-- **`analyze_file(file_path) -> Optional[Dict[str, Any]]`**
-  - Reads and analyzes a Python file.
+- **`analyze_code(code: str, identifier: str) -> Optional[Dict[str, Any]]`**
+  - Evaluates code using all metrics and returns a dictionary with scores and metadata.
+  - Filters out files with fewer than 3 inline comments or 2 docstrings.
+- **`analyze_file(file_path: str) -> Optional[Dict[str, Any]]`**
+  - Reads a Python file (UTF-8 with BOM support) and analyzes it.
 
+---
+
+### **4. File and Project Management**
 #### `FileLoader`
-- **`load_single_file(file_path) -> Optional[Dict[str, Any]]`**
-  - Loads and analyzes a single Python file.
-- **`load_dataset(directory) -> List[Dict[str, Any]]`**
-  - Walks through a directory and analyzes all `.py` files.
+- **`load_single_file(file_path: str) -> Optional[Dict[str, Any]]`**
+  - Analyzes a single `.py` file and assigns it a "Human" or "LLM" label.
+- **`load_dataset(directory: str) -> List[Dict[str, Any]]`**
+  - Recursively analyzes all `.py` files in a directory.
+- **`get_dir_path(sub_folder_name: Optional[str]) -> str`**
+  - Builds the path to a dataset directory (inside `data/`).
 
+---
+
+### **5. Aggregate Scoring**
+#### `ScoreAggregator`
+- **`compute_file_score(metrics: Dict[str, float]) -> float`**
+  - Combines individual metric scores into a single weighted file score.
+- **`aggregate_project_score(file_results: List[Dict[str, Any]]) -> Dict[str, Any]`**
+  - Aggregates metrics across multiple files, weighted by line count.
+  - Detects project type: Human, LLM, or Mixed.
+
+---
+
+### **6. Metric Visualization**
+#### `MetricsDisplay`
+- **`display_metric_grid(metrics: Dict[str, Any]) -> None`**
+  - Visualizes scores using a matplotlib grid: red (low) → green (high).
+  - Displays overall score prominently, with annotations for metadata.
+
+---
+
+### **7. Project-Level Execution**
 #### `ProjectAnalyzer`
-- **`display_project_results(file_results) -> None`**
-  - Displays individual file metrics and aggregated project results.
-- **`analyze_directory(directory) -> None`**
-  - Runs analysis on all Python files in a directory.
+- **`analyze_directory(directory: str) -> None`**
+  - Runs analysis on all `.py` files in the given directory.
+- **`display_project_results(file_results: List[Dict[str, Any]]) -> None`**
+  - Displays per-file and project-level visual summaries.
 
-### **6. Main Routine**
+---
+
+### **8. Main Routine**
 #### `main()`
-- Entry point for running the tool.
-- Analyzes all Python files in the specified dataset directory.
+- Loads a dataset directory and runs a full analysis + visualization.
 
 ## How It Works
 1. The tool extracts comments and docstrings from Python files.
-2. Various metrics are computed for each file, evaluating documentation quality and readability.
+2. Various metrics are computed for each file, evaluating documentation quality.
 3. Metrics are normalized and aggregated to provide overall scores.
 4. Results are displayed using a grid visualization.
 5. Users can analyze a single file or an entire directory of Python files.
