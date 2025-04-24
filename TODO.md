@@ -1,10 +1,16 @@
+### **Accuracy**
+- Does not rlly work
+
 ### **Comment Density**
-- Ignore `from` and `import` statements when calculating comment density.
-- Only count inline comments for comment density.
-- Exclude class and method declarations from the calculation to separate the metric from completeness.
+- Should doc strings and imports count? Currently they do.
+
+### **Completeness**
+- Review weighting.
 
 ### **Conciseness**
-- Appears to be working well but requires further testing.
+- Review weighting.
+
+
 
 ### **General**
 - Create/Find sample code to run tests on.

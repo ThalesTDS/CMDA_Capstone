@@ -2,6 +2,7 @@ import os
 from typing import List, Dict, Any, Optional
 
 from CodeAnalyzer import CodeAnalyzer
+from globals import debug
 
 
 class FileLoader:
@@ -50,4 +51,10 @@ class FileLoader:
         :return: Constructed path as a string.
         """
         base_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-        return base_dir if sub_folder_name is None else os.path.join(base_dir, sub_folder_name)
+        target_dir = base_dir if sub_folder_name is None else os.path.join(base_dir, sub_folder_name)
+
+        if debug: print(f"Analyzing files in directory: {target_dir}")
+        if not os.path.exists(target_dir):
+            print(f"Directory not found: {base_dir}")
+            raise FileNotFoundError
+        return target_dir
