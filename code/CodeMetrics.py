@@ -164,8 +164,8 @@ class CodeMetrics:
         """
         function_doc_pairs = CodeMetrics.get_function_doc_pairs(code)
         if not function_doc_pairs:
-            # TODO: raise RuntimeError(f"Function docstring pairs not found in code: {code}") if preinput parsing
-            return 0.0
+            raise RuntimeError(f"Function docstring pairs not found in code: {code}")
+
 
         scores = []
         for func_node, docstring in function_doc_pairs:
@@ -262,9 +262,83 @@ class CodeMetrics:
         similarity = util.pytorch_cos_sim(comment_embedding, code_embedding)
         return similarity.item()
 
+
     @staticmethod
-    def compute_accuracy_scores(inline_comments: List[str]) -> float:
+    def extract_comment_code_pairs(source: str) -> List[Tuple[str, str]]:
+        lines = source.splitlines()
+        pairs = []
+        n = len(lines)
+
+        # Get docstring lines using AST
+        try:
+            tree = ast.parse(source)
+            docstring_lines = set()
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+                    doc = ast.get_docstring(node)
+                    if doc and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Str):
+                        first_line = node.body[0].lineno - 1
+                        docstring_lines.update(range(first_line, first_line + doc.count('\n') + 1))
+        except SyntaxError:
+            docstring_lines = set()
+
+        def is_hanging_string(line: str) -> bool:
+            stripped = line.strip()
+            return (
+                    (stripped.startswith('"') or stripped.startswith("'")) and
+                    (stripped.endswith('"') or stripped.endswith("'")) and
+                    not (stripped.startswith('"""') or stripped.startswith("'''")) and
+                    len(stripped) > 1
+            )
+
+        def is_code_line(line: str) -> bool:
+            return bool(line.strip()) and not line.strip().startswith("#") and not is_hanging_string(line)
+
+        i = 0
+        while i < n - 1:
+            line = lines[i].strip()
+            next_line = lines[i + 1].strip()
+
+            if i in docstring_lines or (i + 1) in docstring_lines:
+                i += 1
+                continue
+
+            # # comment followed by real code
+            if line.startswith("#") and is_code_line(next_line):
+                pairs.append((line, next_line))
+                i += 2
+                continue
+
+            # hanging string comment followed by real code
+            if is_hanging_string(line) and is_code_line(next_line):
+                pairs.append((line, next_line))
+                i += 2
+                continue
+
+            i += 1
+
+        return pairs
+
+    @staticmethod
+    def compute_accuracy_scores(code: str, inline_comments: List[str]) -> float:
         accuracy_scores = []
+        # Extract code-comment pairs
+        code_comment_pairs = CodeMetrics.extract_comment_code_pairs(code)
+        # Iterate through the pairs and compute accuracy scores
+        for comment_part, code_part  in code_comment_pairs:
+            # Remove leading/trailing whitespace
+            code_part = code_part.strip()
+            comment_part = comment_part.strip()
+
+            # Skip empty lines
+            if not code_part or not comment_part or len(code_part) < 3 or len(comment_part) < 3:
+                continue
+
+            # Compute accuracy score
+            accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, comment_part))
+            if debug:
+                print(f"Code Part: {code_part} Comment Part: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
+
         for line in inline_comments:
             code_part, comment_part = line.split('#', 1)
             accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, comment_part))

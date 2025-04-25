@@ -29,7 +29,7 @@ class CodeAnalyzer:
         density = CodeMetrics.compute_comment_density(code_lines)
         completeness = CodeMetrics.compute_completeness(code)
         conciseness = CodeMetrics.compute_conciseness(docstrings)
-        accuracy = CodeMetrics.compute_accuracy_scores(inline_comments)
+        accuracy = CodeMetrics.compute_accuracy_scores(code, inline_comments)
 
         line_count = sum(1 for line in code_lines if line.strip())
 
