@@ -93,10 +93,13 @@ class CodeMetrics:
                 return (max_ratio - ratio) / (max_ratio - ideal_high)
 
     @staticmethod
-    def assess_function_completeness(func_node: ast.FunctionDef, docstring: str) -> float:
+    def assess_function_completeness(func_node: ast.FunctionDef, docstring: str | None) -> float:
         """
         Compute the completeness score for a single function and its docstring.
         """
+        if not docstring:
+            if debug: print("Method has no docstring")
+            return 0.0
         try:
             parsed = docstring_parser.parse(docstring)
 
@@ -115,16 +118,16 @@ class CodeMetrics:
             # Weights: 40% desc, 30% params, 30% return
             score = 0.0
             if has_desc:
-                # print("has_desc") testing flags
+                if debug: print("has_desc")
                 score += 0.4
             if param_names and has_all_params:
-                # print("has_all_params") testing flags
+                if debug: print("has_all_params")
                 score += 0.3
             if has_return_annot and has_return_doc:
-                # print("has_return_annot and has_return_doc") testing flags
+                if debug: print("has_return_annot and has_return_doc")
                 score += 0.3
             elif not has_return_annot:
-                # print("no return found") testing flags
+                if debug: print("no return found")
                 score += 0.3  # Return not expected, grant credit
 
             return score
@@ -146,8 +149,7 @@ class CodeMetrics:
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
                     doc = ast.get_docstring(node)
-                    if doc:
-                        pairs.append((node, doc))
+                    pairs.append((node, doc))
         except Exception as e:
             print("AST parsing error in get_function_doc_pairs:", e)
         return pairs
