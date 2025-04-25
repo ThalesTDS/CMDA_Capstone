@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from CodeParser import CodeParser
 from CodeMetrics import CodeMetrics
 from ScoreAggregator import ScoreAggregator
@@ -7,7 +7,7 @@ from globals import trim_file_path
 
 class CodeAnalyzer:
     @staticmethod
-    def analyze_code(code: str, identifier: str = "unknown") -> Dict[str, Any] | None:
+    def analyze_code(code: str, identifier: str = "unknown") -> Union[Dict[str, Any], None]:
         """
         Analyze a code snippet and compute various metrics.
 

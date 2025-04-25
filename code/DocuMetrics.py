@@ -45,9 +45,11 @@ def main():
     import pandas as pd
     import os
 
-    dataset_directory = FileLoader.get_dir_path()
+    dataset_directory = FileLoader.get_dir_path("eval")
     file_results = FileLoader.load_dataset(dataset_directory)  # ← Load + analyze each file
-
+    
+    for result in file_results:
+        print(f"{result['identifier']} → {result['doc_type']}")
     # Create exports folder if it doesn't exist
     os.makedirs("exports", exist_ok=True)
 
@@ -63,6 +65,7 @@ def main():
     # Combine both into one file
     combined_df = pd.concat([df_file_metrics, df_project_metrics], ignore_index=True)
     combined_df.to_csv("exports/all_metrics_combined.csv", index=False)
+
 
 
 

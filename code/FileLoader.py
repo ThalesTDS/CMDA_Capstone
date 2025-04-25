@@ -37,9 +37,15 @@ class FileLoader:
             for file in files:
                 if file.endswith(".py"):
                     file_path = os.path.join(root, file)
-                    metrics = FileLoader.load_single_file(file_path)
-                    if metrics is not None:
-                        results.append(metrics)
+                    try:
+                        metrics = FileLoader.load_single_file(file_path)
+                        if metrics is not None:
+                            print(f"✅ Processed: {file_path} → {metrics['doc_type']}")
+                            results.append(metrics)
+                        else:
+                            print(f"⚠️ Skipped (None returned): {file_path}")
+                    except Exception as e:
+                        print(f"❌ Error processing {file_path}: {e}")
         return results
 
     @staticmethod
