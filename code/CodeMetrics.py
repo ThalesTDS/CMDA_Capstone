@@ -1,6 +1,7 @@
 import ast
 import warnings
 from typing import List, Tuple
+from typing import Optional
 
 import docstring_parser
 import nltk
@@ -93,7 +94,7 @@ class CodeMetrics:
                 return (max_ratio - ratio) / (max_ratio - ideal_high)
 
     @staticmethod
-    def assess_function_completeness(func_node: ast.FunctionDef, docstring: str | None) -> float:
+    def assess_function_completeness(func_node: ast.FunctionDef, docstring: Optional[str]) -> float:
         """
         Compute the completeness score for a single function and its docstring.
         """
