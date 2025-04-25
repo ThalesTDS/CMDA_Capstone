@@ -7,7 +7,8 @@ import nltk
 import numpy as np
 from nltk.tokenize import sent_tokenize
 from sentence_transformers import util
-
+import unixcoder
+import torch
 nltk.download('punkt_tab', quiet=True)
 from globals import model, DOC_TAG_PATTERN, debug
 
@@ -257,10 +258,23 @@ class CodeMetrics:
         """
         if not comment or not code_snippet:
             raise RuntimeError(f"Comment or code snippet not found: Code: {code_snippet}, Comment: {comment}")
-        comment_embedding = model.encode(comment, convert_to_tensor=True)
-        code_embedding = model.encode(code_snippet, convert_to_tensor=True)
-        similarity = util.pytorch_cos_sim(comment_embedding, code_embedding)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        code_model = unixcoder.UniXcoder("microsoft/unixcoder-base")
+        code_model.to(device)
+        tokens_ids = code_model.tokenize([code_snippet],max_length=512,mode="<encoder-only>")
+        source_ids = torch.tensor(tokens_ids).to(device)
+        
+        tokens_embeddings, code_embedding = code_model(source_ids)
+        
+        tokens_ids = code_model.tokenize([comment],max_length=512,mode="<encoder-only>")
+        source_ids = torch.tensor(tokens_ids)
+        tokens_embeddings,  comment_embedding = code_model(source_ids)
+        norm_max_func_embedding = torch.nn.functional.normalize(code_embedding, p=2, dim=1)
+        norm_comment_embedding = torch.nn.functional.normalize(comment_embedding, p=2, dim=1)
+        similarity = torch.einsum("ac,bc->ab",norm_max_func_embedding, norm_comment_embedding)
+      
         return similarity.item()
+        
 
 
     @staticmethod
