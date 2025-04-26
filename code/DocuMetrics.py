@@ -47,16 +47,17 @@ class ProjectAnalyzer:
         combined_df.to_csv(output_file, index=False)
 
     @staticmethod
-    def analyze_directory(directory: str) -> None:
+    def analyze_and_export(directory: str, output_file: str = "exports/all_metrics_combined.csv") -> None:
         """
         Analyze all Python files in a directory and display both individual and aggregated metrics.
 
         :param directory: Path to the directory containing Python files.
+        :param output_file: Path to the output CSV file.
         :return: None.
         """
         file_results = FileLoader.load_dataset(directory)
         ProjectAnalyzer.display_project_results(file_results)
-
+        ProjectAnalyzer.export_to_csv(file_results, output_file)
 
 # =============================================================================
 # Main Routine
