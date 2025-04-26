@@ -1,14 +1,16 @@
 import ast
+import re
 import warnings
 from typing import List, Tuple
 
 import docstring_parser
 import nltk
 import numpy as np
-from nltk.tokenize import sent_tokenize
-from sentence_transformers import util
-import unixcoder
 import torch
+from nltk.tokenize import sent_tokenize
+
+import unixcoder
+
 nltk.download('punkt_tab', quiet=True)
 from globals import model, DOC_TAG_PATTERN, debug
 
@@ -167,8 +169,9 @@ class CodeMetrics:
         """
         function_doc_pairs = CodeMetrics.get_function_doc_pairs(code)
         if not function_doc_pairs:
-            raise RuntimeError(f"Function docstring pairs not found in code: {code}")
-
+            print(f"Function docstring pairs not found in code: {code}")
+            return 0.0
+            # raise RuntimeError(f"Function docstring pairs not found in code: {code}")
 
         scores = []
         for func_node, docstring in function_doc_pairs:
@@ -206,7 +209,7 @@ class CodeMetrics:
        :return: A score between 0 (not concise) and 1 (ideally concise).
        """
 
-        if not docstrings or len(docstrings) == 0:
+        if not docstrings:
             # TODO: raise RuntimeError(f"Docstrings not found in code: {docstrings}") if preinput parsing
             return 0.0
 
@@ -220,12 +223,13 @@ class CodeMetrics:
         if not filtered_descriptions:
             # TODO: raise RuntimeError(f"Docstrings all empty in code: {docstrings}") if preinput parsing
             return 0.0
-
+        count_sentences = 0
         # Count verbose comments
         verbose_count = 0
         for desc in filtered_descriptions:
             sentences = sent_tokenize(desc)
             for s in sentences:
+                count_sentences += 1
                 if len(s.split()) > verbose_threshold:
                     verbose_count += 1
 
@@ -236,6 +240,7 @@ class CodeMetrics:
         row = 0
         similar_count = 0
         for col in range(1, len(filtered_descriptions)):
+            count_sentences += 1
             if similarities[row, col] >= similarity_threshold:
                 similar_count += 1
             else:
@@ -243,10 +248,10 @@ class CodeMetrics:
 
         # Score computation
         penalty = 0.75 * verbose_count + 0.25 * similar_count
-        max_penalty = len(filtered_descriptions) - 0.25
-        #            = 0.75 * len(docstrings) + 0.25 * (len(docstrings) - 1)
+        max_penalty = max(1e-6, count_sentences - 0.25)
+        #            = 0.75 * count_sentences + 0.25 * (count_sentences - 1)
 
-        return 1 - (penalty / max_penalty)
+        return max(0, 1 - (penalty / max_penalty))
 
     @staticmethod
     def evaluate_accuracy(comment: str, code_snippet: str) -> float:
@@ -263,21 +268,19 @@ class CodeMetrics:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         code_model = unixcoder.UniXcoder("microsoft/unixcoder-base")
         code_model.to(device)
-        tokens_ids = code_model.tokenize([code_snippet],max_length=512,mode="<encoder-only>")
+        tokens_ids = code_model.tokenize([code_snippet], max_length=512, mode="<encoder-only>")
         source_ids = torch.tensor(tokens_ids).to(device)
-        
+
         tokens_embeddings, code_embedding = code_model(source_ids)
-        
-        tokens_ids = code_model.tokenize([comment],max_length=512,mode="<encoder-only>")
+
+        tokens_ids = code_model.tokenize([comment], max_length=512, mode="<encoder-only>")
         source_ids = torch.tensor(tokens_ids)
-        tokens_embeddings,  comment_embedding = code_model(source_ids)
+        tokens_embeddings, comment_embedding = code_model(source_ids)
         norm_max_func_embedding = torch.nn.functional.normalize(code_embedding, p=2, dim=1)
         norm_comment_embedding = torch.nn.functional.normalize(comment_embedding, p=2, dim=1)
-        similarity = torch.einsum("ac,bc->ab",norm_max_func_embedding, norm_comment_embedding)
-      
-        return similarity.item()
-        
+        similarity = torch.einsum("ac,bc->ab", norm_max_func_embedding, norm_comment_embedding)
 
+        return similarity.item()
 
     @staticmethod
     def extract_comment_code_pairs(source: str) -> List[Tuple[str, str]]:
@@ -287,7 +290,9 @@ class CodeMetrics:
 
         # Get docstring lines using AST
         try:
-            tree = ast.parse(source)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                tree = ast.parse(source)
             docstring_lines = set()
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
@@ -319,7 +324,7 @@ class CodeMetrics:
                 i += 1
                 continue
 
-            # # comment followed by real code
+            # comment followed by real code
             if line.startswith("#") and is_code_line(next_line):
                 pairs.append((line, next_line))
                 i += 2
@@ -336,28 +341,116 @@ class CodeMetrics:
         return pairs
 
     @staticmethod
-    def compute_accuracy_scores(code: str, inline_comments: List[str]) -> float:
+    def get_description_and_code(code: str) -> List[Tuple[str, str]]:
+        """
+        Extracts (docstring, cleaned function body) pairs from Python source code.
+        Cleans out comments while preserving real indentation and structure.
+
+        :param code: String containing the Python source code.
+        :return: List of (docstring, function_body) tuples.
+        """
+        lines = code.splitlines(keepends=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(code)
+        functions = []
+        all_docstring_lines = set()
+        function_ranges = []  # (start_line, end_line)
+
+        # First pass: collect docstring lines and function ranges
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Str):
+                    docstring_node = node.body[0]
+                    doc_start = docstring_node.lineno - 1
+                    doc_end = docstring_node.end_lineno
+                    all_docstring_lines.update(range(doc_start, doc_end))
+
+                start_line = node.lineno - 1
+                function_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
+                end_line = start_line + 1
+
+                while end_line < len(lines):
+                    line = lines[end_line]
+                    if line.strip() == "" or line.lstrip().startswith("#"):
+                        end_line += 1
+                        continue
+                    current_indent = len(line) - len(line.lstrip())
+                    if current_indent <= function_indent:
+                        break
+                    end_line += 1
+
+                function_ranges.append((start_line, end_line))
+
+        # Second pass: extract and clean functions
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                full_docstring = ast.get_docstring(node) or ""
+                description = CodeMetrics.extract_description_text(full_docstring)
+                start_line = node.lineno - 1
+                function_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
+                end_line = start_line + 1
+
+                while end_line < len(lines):
+                    line = lines[end_line]
+                    if line.strip() == "" or line.lstrip().startswith("#"):
+                        end_line += 1
+                        continue
+                    current_indent = len(line) - len(line.lstrip())
+                    if current_indent <= function_indent:
+                        break
+                    end_line += 1
+
+                function_lines = lines[start_line:end_line]
+
+                # Remove docstring lines and nested function lines
+                cleaned_lines = []
+                for idx, line in enumerate(function_lines):
+                    absolute_idx = start_line + idx
+                    # Skip if line is part of any docstring
+                    if absolute_idx in all_docstring_lines:
+                        continue
+                    # Skip if line is inside another nested function (but allow the main function)
+                    inside_other_function = any(
+                        other_start <= absolute_idx < other_end and not (other_start == start_line)
+                        for (other_start, other_end) in function_ranges
+                    )
+                    if inside_other_function:
+                        continue
+                    # Clean comments
+                    stripped = line.lstrip()
+                    if stripped.startswith("#") or stripped == "":
+                        continue
+                    code_without_comment = re.split(r'\s+#', line, maxsplit=1)[0]
+                    cleaned_lines.append(code_without_comment.rstrip())
+
+                cleaned_function_body = '\n'.join(cleaned_lines)
+                functions.append((description, cleaned_function_body))
+
+        return functions
+
+    @staticmethod
+    def compute_accuracy_scores(code: str) -> float:
+        """
+        Extracts (docstring, cleaned function body) pairs from Python source code.
+        Cleans out comments while preserving real indentation and structure.
+
+        :param code: String containing the Python source code.
+        :return: List of (docstring, function_body) tuples.
+        """
+        pairs = CodeMetrics.get_description_and_code(code)
         accuracy_scores = []
-        # Extract code-comment pairs
-        code_comment_pairs = CodeMetrics.extract_comment_code_pairs(code)
-        # Iterate through the pairs and compute accuracy scores
-        for comment_part, code_part  in code_comment_pairs:
+        for docstring, code_part in pairs:
             # Remove leading/trailing whitespace
             code_part = code_part.strip()
-            comment_part = comment_part.strip()
+            docstring = docstring.strip()
 
             # Skip empty lines
-            if not code_part or not comment_part or len(code_part) < 3 or len(comment_part) < 3:
+            if not code_part or not docstring or len(code_part) < 3 or len(docstring) < 3:
                 continue
 
             # Compute accuracy score
-            accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, comment_part))
+            accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, docstring))
             if debug:
-                print(f"Code Part: {code_part} Comment Part: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
-
-        for line in inline_comments:
-            code_part, comment_part = line.split('#', 1)
-            accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, comment_part))
-            if debug:
-                print(f"Code Line: {code_part} Comment: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
+                print(f"Code Part: {code_part} Docstring: {docstring}  Accuracy Score: {accuracy_scores[-1]}")
         return np.mean(accuracy_scores) if accuracy_scores else 0.0
