@@ -27,7 +27,10 @@ DOC_TAG_PATTERN = re.compile(
         Yields       |
         Attributes   |
         @param       |
-        @return
+        @return      |
+        @raises      |
+        @rtype       |
+        >>>
     )
     """,
     re.IGNORECASE | re.MULTILINE | re.VERBOSE

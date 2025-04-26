@@ -9,10 +9,10 @@ from globals import METRICS_LIST
 class ScoreAggregator:
     # Global adjustable weights; must sum to 1.
     WEIGHTS: Dict[str, float] = {
-        "comment_density": 1 / 4,
-        "completeness": 1 / 4,
-        "conciseness": 1 / 4,
-        "accuracy": 1 / 4
+        "comment_density": 0.3,
+        "completeness": 0.4,
+        "conciseness": 0.2,
+        "accuracy": 0.1
     }
 
     @staticmethod
