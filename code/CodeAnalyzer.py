@@ -17,18 +17,21 @@ class CodeAnalyzer:
         enough comments or docstrings to be evaluated.
         """
         code_lines = code.splitlines()
+        # empty file early drop out optimization
+        if not code_lines:
+            return None
         inline_comments, docstrings, counts = CodeParser.extract_comments(code)
 
         # As of now we require 4 comments and 2 docstrings to be present in the code to be evaluated
         # TODO: Maybe make this a more useful output, possibly with a notice idk
         count_comments, count_docstrings = counts
-        if count_comments < 3 or count_docstrings < 2:
+        if count_comments < 2 or count_docstrings < 1:
             return None
 
         density = CodeMetrics.compute_comment_density(code_lines)
         completeness = CodeMetrics.compute_completeness(code)
         conciseness = CodeMetrics.compute_conciseness(docstrings)
-        accuracy = CodeMetrics.compute_accuracy_scores(code, inline_comments)
+        accuracy = CodeMetrics.compute_accuracy_scores(code)
 
         line_count = sum(1 for line in code_lines if line.strip())
 
