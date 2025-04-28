@@ -68,6 +68,6 @@ def main():
 
 
 
-
-if __name__ == "__main__":
-    main()
+# wont need since importing through dashboard
+# if __name__ == "__main__":
+#     main()

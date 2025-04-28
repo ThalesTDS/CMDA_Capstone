@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect
+from code.DocuMetrics import ProjectAnalyzer
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
@@ -9,7 +10,7 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Load initial dataset
-data_path = "/Users/amyferrufino/Downloads/Capstone/CMDA_Capstone/mydashboard/all_metrics_combined.csv"
+data_path = "mydashboard/all_metrics_combined.csv"
 df = pd.read_csv(data_path)
 
 def generate_gauges(selected_file):
@@ -52,10 +53,16 @@ def dashboard():
     global df
     if request.method == "POST":
         uploaded_file = request.files['file']
-        if uploaded_file.filename.endswith(".csv"):
+        if uploaded_file.filename.endswith(".py"):
             file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
             uploaded_file.save(file_path)
-            df = pd.read_csv(file_path)
+
+            # Analyze new files
+            ProjectAnalyzer.analyze_and_export(directory=UPLOAD_FOLDER, output_file="mydashboard/all_metrics_combined.csv")
+
+            # Reload new dataset
+            df = pd.read_csv("mydashboard/all_metrics_combined.csv")
+
             return redirect("/")
 
     selected_file = request.args.get("file")
