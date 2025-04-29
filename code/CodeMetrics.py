@@ -18,7 +18,7 @@ from globals import model, DOC_TAG_PATTERN, debug
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Initialize the UniXcoder model and move it to the selected device
-_unixcoder = unixcoder.UniXcoder("microsoft/unixcoder-base").to(_device)
+_unixcoder = unixcoder.UniXcoder("microsoft/unixcoder-base").to(_device).eval()
 
 
 def _embed(text: str) -> torch.Tensor:
