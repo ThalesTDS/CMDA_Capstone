@@ -6,41 +6,69 @@ from .FileLoader import FileLoader
 from .MetricsDisplay import MetricsDisplay
 from .ScoreAggregator import ScoreAggregator
 
+
+# =============================================================================
+# File and Project Analysis
+# =============================================================================
+
 class ProjectAnalyzer:
     @staticmethod
-    def analyze_and_export(input_directory: str, output_csv: str) -> list:
+    def display_project_results(file_results: List[Dict[str, Any]]) -> None:
         """
-        Analyze all Python files in a directory, export results to CSV, and collect any warnings.
-        Returns:
-            List of warning strings.
+        Display metrics for each file and also display aggregated project metrics.
+
+        :param file_results: List of dictionaries with file metrics.
+        :return: None.
         """
-        file_results = []
-        warnings_list = []
+        for res in file_results:
+            MetricsDisplay.display_metric_grid(res)
+        project_metrics = ScoreAggregator.aggregate_project_score(file_results)
+        MetricsDisplay.display_metric_grid(project_metrics)
 
-        try:
-            file_results = FileLoader.load_dataset(input_directory)
-        except Exception as e:
-            warnings_list.append(f"Failed to load dataset: {str(e)}")
+    @staticmethod
+    def export_to_csv(file_results: List[Dict[str, Any]], output_file: str) -> None:
+        """
+        Export the analysis results to a CSV file.
 
-        clean_results = []
-        for result in file_results:
-            if result is None:
-                warnings_list.append(f"⚠️ Skipped a file (could not be processed).")
-            else:
-                clean_results.append(result)
+        :param file_results: List of dictionaries with file metrics.
+        :param output_file: Path to the output CSV file.
+        :return: None.
+        """
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        if not clean_results:
-            warnings_list.append("⚠️ No files were successfully processed.")
+        df_file_metrics = pd.DataFrame(file_results)
+        df_file_metrics["level"] = "file"
 
-        # Save results
-        df_file_metrics = pd.DataFrame(clean_results)
-        if not df_file_metrics.empty:
-            df_file_metrics["level"] = "file"
-            os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-            df_file_metrics.to_csv(output_csv, index=False)
+        project_metrics = ScoreAggregator.aggregate_project_score(file_results)
+        df_project_metrics = pd.DataFrame([project_metrics])
+        df_project_metrics["level"] = "project"
 
-        return warnings_list
+        combined_df = pd.concat([df_file_metrics, df_project_metrics], ignore_index=True)
+        combined_df.to_csv(output_file, index=False)
+
+    @staticmethod
+    def analyze_and_export(directory: str, output_file: str = "exports/all_metrics_combined.csv") -> None:
+        """
+        Analyze all Python files in a directory and display both individual and aggregated metrics.
+
+        :param directory: Path to the directory containing Python files.
+        :param output_file: Path to the output CSV file.
+        :return: None.
+        """
+        file_results = FileLoader.load_dataset(directory)
+        ProjectAnalyzer.display_project_results(file_results)
+        ProjectAnalyzer.export_to_csv(file_results, output_file)
 
 # =============================================================================
-# No main() anymore because dashboard will call ProjectAnalyzer.analyze_and_export()
+# Main Routine
 # =============================================================================
+def main():
+    """
+    Main routine to analyze a directory of Python files and display the results.
+    """
+    dataset_directory = FileLoader.get_dir_path("working_pwc_code")
+    ProjectAnalyzer.analyze_and_export(dataset_directory)
+
+
+if __name__ == "__main__":
+    main()

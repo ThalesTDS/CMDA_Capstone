@@ -12,8 +12,6 @@ from sentence_transformers import util
 from . import unixcoder
 import torch
 
-import unixcoder
-
 nltk.download('punkt_tab', quiet=True)
 from .globals import model, DOC_TAG_PATTERN, debug
 
