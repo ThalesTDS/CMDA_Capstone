@@ -1,8 +1,8 @@
 import os
 from typing import List, Dict, Any, Optional
-
 from .CodeAnalyzer import CodeAnalyzer
 from .globals import debug
+
 
 
 class FileLoader:
@@ -38,7 +38,9 @@ class FileLoader:
                 if file.endswith(".py"):
                     file_path = os.path.join(root, file)
                     if debug: print(f"Analyzing file: {file_path}")
+                    print(f"🚀 About to analyze {file_path}")
                     metrics = FileLoader.load_single_file(file_path)
+                    print(f"✅ Done analyzing {file_path}")
                     if metrics is not None:
                         results.append(metrics)
         return results

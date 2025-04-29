@@ -1,0 +1,6 @@
+comment_density,completeness,conciseness,accuracy,overall_score,line_count,identifier,doc_type,level,num_files
+0.9498327759197324,0.6,0.9473684210526316,0.2579928934574127,0.7402228063321873,117,/Users/amyferrufino/Downloads/Capstone/CMDA_Capstone/mydashboard/uploads/gradient_descent.py,Human,file,
+0.6647673314339981,0.7,0.9748743718592965,0.5975915789604187,0.7341642316981006,165,/Users/amyferrufino/Downloads/Capstone/CMDA_Capstone/mydashboard/uploads/gradient_descent_llm.py,LLM,file,
+1.0,0.14285714285714285,0.7272727272727273,0.10335822403430939,0.5129332250008335,325,/Users/amyferrufino/Downloads/Capstone/CMDA_Capstone/mydashboard/uploads/convolution_neural_network.py,Human,file,
+0.6440071556350625,0.7,1.0,0.36273258924484253,0.709475405615003,87,/Users/amyferrufino/Downloads/Capstone/CMDA_Capstone/mydashboard/uploads/convolution_neural_network_llm.py,LLM,file,
+0.8672127766707045,0.42223137093454094,0.8574351772097668,0.27944803622253345,0.6284882204392345,694,Project Results,Mixed,project,4.0

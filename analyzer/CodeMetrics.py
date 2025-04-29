@@ -1,19 +1,64 @@
 import ast
 import re
 import warnings
+from functools import lru_cache
 from typing import List, Tuple
-from typing import Optional
 
 import docstring_parser
 import nltk
-import numpy as np
-from nltk.tokenize import sent_tokenize
-from sentence_transformers import util
-from . import unixcoder
 import torch
+from nltk.tokenize import sent_tokenize
 
+
+from . import unixcoder
 nltk.download('punkt_tab', quiet=True)
+
 from .globals import model, DOC_TAG_PATTERN, debug
+
+# Set the device to GPU if available, otherwise fallback to CPU
+_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+_unixcoder = None
+
+def get_unixcoder_model():
+    global _unixcoder
+    if _unixcoder is None:
+        print("🚀 Loading UniXcoder model...")
+        _unixcoder = unixcoder.UniXcoder("microsoft/unixcoder-base").to(_device)
+    return _unixcoder
+
+
+def _embed(text: str) -> torch.Tensor:
+    """
+    Generate an L2-normalized embedding for the given text using the UniXcoder model.
+
+    This function tokenizes the input text, processes it through the UniXcoder model,
+    and normalizes the resulting embedding vector using L2 normalization.
+
+    :param text: The input text to embed.
+    :return: A PyTorch tensor containing the L2-normalized embedding.
+    """
+    unixcoder_model = get_unixcoder_model()
+
+    token_ids = unixcoder_model.tokenize([text], max_length=512, mode="<encoder-only>")
+    src = torch.tensor(token_ids).to(_device)
+    _, emb = unixcoder_model(src)
+
+    return torch.nn.functional.normalize(emb, p=2, dim=1)
+
+
+
+@lru_cache(maxsize=512)
+def _parse_docstring(ds: str):
+    """
+    Parse a docstring and cache the result.
+
+    This function wraps the `docstring_parser.parse()` method with an LRU cache
+    to improve performance when parsing the same docstring multiple times.
+
+    :param ds: The docstring to parse.
+    :return: A parsed representation of the docstring.
+    """
+    return docstring_parser.parse(ds)
 
 
 # =============================================================================
@@ -96,7 +141,7 @@ class CodeMetrics:
                 return (max_ratio - ratio) / (max_ratio - ideal_high)
 
     @staticmethod
-    def assess_function_completeness(func_node: ast.FunctionDef, docstring: Optional[str]) -> float:
+    def assess_function_completeness(func_node: ast.FunctionDef, docstring: str | None) -> float:
         """
         Compute the completeness score for a single function and its docstring.
         """
@@ -104,7 +149,7 @@ class CodeMetrics:
             if debug: print("Method has no docstring")
             return 0.0
         try:
-            parsed = docstring_parser.parse(docstring)
+            parsed = _parse_docstring(docstring)
 
             # General description (minimum 2 words)
             has_desc = parsed.short_description is not None and len(parsed.short_description.split()) >= 2
@@ -211,8 +256,7 @@ class CodeMetrics:
        """
 
         if not docstrings:
-            # TODO: raise RuntimeError(f"Docstrings not found in code: {docstrings}") if preinput parsing
-            return 0.0
+            raise RuntimeError("Docstrings not found in code -- CodeMetrics.compute_conciseness")
 
         # Stop considering docstrings once tags are found (description ended)
         parsed_docstring_descriptions = [
@@ -222,7 +266,6 @@ class CodeMetrics:
         # Remove empty descriptions
         filtered_descriptions = [desc for desc in parsed_docstring_descriptions if desc.strip()]
         if not filtered_descriptions:
-            # TODO: raise RuntimeError(f"Docstrings all empty in code: {docstrings}") if preinput parsing
             return 0.0
         count_sentences = 0
         # Count verbose comments
@@ -253,93 +296,6 @@ class CodeMetrics:
         #            = 0.75 * count_sentences + 0.25 * (count_sentences - 1)
 
         return max(0, 1 - (penalty / max_penalty))
-
-    @staticmethod
-    def evaluate_accuracy(comment: str, code_snippet: str) -> float:
-        """
-        Evaluate the relevance of a comment by comparing its semantic similarity to the corresponding code snippet.
-        Uses a pre-trained BERT-based model (Sentence-BERT) to compute similarity scores.
-
-        :param comment: The comment text.
-        :param code_snippet: The corresponding code line.
-        :return: The cosine similarity score (between 0 and 1).
-        """
-        if not comment or not code_snippet:
-            raise RuntimeError(f"Comment or code snippet not found: Code: {code_snippet}, Comment: {comment}")
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        code_model = unixcoder.UniXcoder("microsoft/unixcoder-base")
-        code_model.to(device)
-        tokens_ids = code_model.tokenize([code_snippet], max_length=512, mode="<encoder-only>")
-        source_ids = torch.tensor(tokens_ids).to(device)
-
-        tokens_embeddings, code_embedding = code_model(source_ids)
-
-        tokens_ids = code_model.tokenize([comment], max_length=512, mode="<encoder-only>")
-        source_ids = torch.tensor(tokens_ids)
-        tokens_embeddings, comment_embedding = code_model(source_ids)
-        norm_max_func_embedding = torch.nn.functional.normalize(code_embedding, p=2, dim=1)
-        norm_comment_embedding = torch.nn.functional.normalize(comment_embedding, p=2, dim=1)
-        similarity = torch.einsum("ac,bc->ab", norm_max_func_embedding, norm_comment_embedding)
-
-        return similarity.item()
-
-    @staticmethod
-    def extract_comment_code_pairs(source: str) -> List[Tuple[str, str]]:
-        lines = source.splitlines()
-        pairs = []
-        n = len(lines)
-
-        # Get docstring lines using AST
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", SyntaxWarning)
-                tree = ast.parse(source)
-            docstring_lines = set()
-            for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
-                    doc = ast.get_docstring(node)
-                    if doc and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Str):
-                        first_line = node.body[0].lineno - 1
-                        docstring_lines.update(range(first_line, first_line + doc.count('\n') + 1))
-        except SyntaxError:
-            docstring_lines = set()
-
-        def is_hanging_string(line: str) -> bool:
-            stripped = line.strip()
-            return (
-                    (stripped.startswith('"') or stripped.startswith("'")) and
-                    (stripped.endswith('"') or stripped.endswith("'")) and
-                    not (stripped.startswith('"""') or stripped.startswith("'''")) and
-                    len(stripped) > 1
-            )
-
-        def is_code_line(line: str) -> bool:
-            return bool(line.strip()) and not line.strip().startswith("#") and not is_hanging_string(line)
-
-        i = 0
-        while i < n - 1:
-            line = lines[i].strip()
-            next_line = lines[i + 1].strip()
-
-            if i in docstring_lines or (i + 1) in docstring_lines:
-                i += 1
-                continue
-
-            # comment followed by real code
-            if line.startswith("#") and is_code_line(next_line):
-                pairs.append((line, next_line))
-                i += 2
-                continue
-
-            # hanging string comment followed by real code
-            if is_hanging_string(line) and is_code_line(next_line):
-                pairs.append((line, next_line))
-                i += 2
-                continue
-
-            i += 1
-
-        return pairs
 
     @staticmethod
     def get_description_and_code(code: str) -> List[Tuple[str, str]]:
@@ -433,25 +389,21 @@ class CodeMetrics:
     @staticmethod
     def compute_accuracy_scores(code: str) -> float:
         """
-        Extracts (docstring, cleaned function body) pairs from Python source code.
-        Cleans out comments while preserving real indentation and structure.
+        Compute the accuracy score between code and its corresponding docstring.
 
-        :param code: String containing the Python source code.
-        :return: List of (docstring, function_body) tuples.
+        This function extracts pairs of docstrings and their associated code,
+        generates embeddings for both using the `_embed` function, and calculates
+        the cosine similarity between the embeddings. The mean similarity score
+        is returned as the accuracy score.
+
+        :param code: The Python source code as a string.
+        :return: A float representing the mean similarity score between code and docstrings.
         """
         pairs = CodeMetrics.get_description_and_code(code)
-        accuracy_scores = []
-        for docstring, code_part in pairs:
-            # Remove leading/trailing whitespace
-            code_part = code_part.strip()
-            docstring = docstring.strip()
+        if not pairs:
+            return 0.0
 
-            # Skip empty lines
-            if not code_part or not docstring or len(code_part) < 3 or len(docstring) < 3:
-                continue
-
-            # Compute accuracy score
-            accuracy_scores.append(CodeMetrics.evaluate_accuracy(code_part, docstring))
-            if debug:
-                print(f"Code Part: {code_part} Docstring: {docstring}  Accuracy Score: {accuracy_scores[-1]}")
-        return np.mean(accuracy_scores) if accuracy_scores else 0.0
+        flat = [txt for p in pairs for txt in p]  # [code0, doc0, …]
+        embeds = torch.cat([_embed(t) for t in flat])
+        sims = torch.einsum("ac,ac->a", embeds[0::2], embeds[1::2])
+        return sims.mean().item()
