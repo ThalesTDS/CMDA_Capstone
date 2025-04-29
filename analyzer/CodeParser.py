@@ -36,7 +36,7 @@ class CodeParser:
                 warnings.simplefilter("ignore", SyntaxWarning)
                 tree = ast.parse(code)
             for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                     doc = ast.get_docstring(node)
                     if doc:
                         docstrings.append(doc)
