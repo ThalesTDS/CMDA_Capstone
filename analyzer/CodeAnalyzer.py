@@ -22,10 +22,11 @@ class CodeAnalyzer:
             return None
         inline_comments, docstrings, counts = CodeParser.extract_comments(code)
 
-        # As of now we require 4 comments and 2 docstrings to be present in the code to be evaluated
-        # TODO: Maybe make this a more useful output, possibly with a notice idk
+        # As of now we require 1 docstring to be present in the code to be evaluated
+        # TODO: Maybe make this a more useful output, possibly with a notice idk, added print for now
         count_comments, count_docstrings = counts
-        if count_comments < 2 or count_docstrings < 1:
+        if not count_docstrings:
+            print(f"File {identifier} does not contain enough docstrings to be evaluated.")
             return None
 
         density = CodeMetrics.compute_comment_density(code_lines)

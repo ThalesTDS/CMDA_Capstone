@@ -44,7 +44,7 @@ class ScoreAggregator:
         if total_lines == 0:
             raise ValueError("No lines found in the project.")
 
-        if all(res["doc_type"] == "llm" for res in file_results):
+        if all(res["doc_type"] == "LLM" for res in file_results):
             project_type = "LLM"
         elif all(res["doc_type"] == "Human" for res in file_results):
             project_type = "Human"
