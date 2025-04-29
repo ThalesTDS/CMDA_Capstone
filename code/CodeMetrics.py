@@ -1,6 +1,7 @@
 import ast
 import re
 import warnings
+from functools import lru_cache
 from typing import List, Tuple
 
 import docstring_parser
