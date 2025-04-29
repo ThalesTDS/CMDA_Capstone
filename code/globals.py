@@ -35,7 +35,7 @@ DOC_TAG_PATTERN = re.compile(
     """,
     re.IGNORECASE | re.MULTILINE | re.VERBOSE
 )
-debug = True
+debug = False
 
 
 def trim_file_path(file_path: str) -> str:
