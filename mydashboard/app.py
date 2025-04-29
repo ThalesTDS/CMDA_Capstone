@@ -99,9 +99,9 @@ def dashboard():
                 uploaded_file.save(file_path)
 
         # Analyze uploaded files
-        warnings_list = ProjectAnalyzer.analyze_and_export(
-            input_directory=UPLOAD_FOLDER,
-            output_csv="mydashboard/all_metrics_combined.csv"
+        ProjectAnalyzer.analyze_and_export(
+            UPLOAD_FOLDER,
+            "mydashboard/all_metrics_combined.csv"
         )
 
         # Reload the new dataset
