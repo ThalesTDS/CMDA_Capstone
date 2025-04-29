@@ -8,10 +8,10 @@ import nltk
 import numpy as np
 from nltk.tokenize import sent_tokenize
 from sentence_transformers import util
-import unixcoder
+from . import unixcoder
 import torch
 nltk.download('punkt_tab', quiet=True)
-from globals import model, DOC_TAG_PATTERN, debug
+from .globals import model, DOC_TAG_PATTERN, debug
 
 
 # =============================================================================

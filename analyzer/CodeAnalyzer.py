@@ -1,8 +1,8 @@
 from typing import Dict, Any, Optional, Union
-from CodeParser import CodeParser
-from CodeMetrics import CodeMetrics
-from ScoreAggregator import ScoreAggregator
-from globals import trim_file_path
+from .CodeParser import CodeParser
+from .CodeMetrics import CodeMetrics
+from .ScoreAggregator import ScoreAggregator
+from .globals import trim_file_path
 
 
 class CodeAnalyzer:

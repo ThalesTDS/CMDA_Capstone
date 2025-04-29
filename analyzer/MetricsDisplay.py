@@ -2,7 +2,7 @@ from typing import Dict, Any, Union
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from globals import METRICS_LIST
+from .globals import METRICS_LIST
 
 
 # =============================================================================

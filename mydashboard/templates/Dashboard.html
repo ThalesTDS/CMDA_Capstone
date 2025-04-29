@@ -74,9 +74,11 @@
         <h2>DocuMetrics | NAVSEA Documentation Evaluation</h2>
     </div>
     <div>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file">
-            <button type="submit">Upload CSV</button>
+        <form method="POST" enctype="multipart/form-data" style="margin-top: 10px;">
+            <input type="file" name="files" multiple accept=".py" required>
+            <button type="submit" style="background-color: #001f77; color: white; padding: 8px 16px; border: none; border-radius: 8px; margin-top: 5px;">
+                Upload Python Files
+            </button>
         </form>
         <form method="GET">
             <label for="file">Select a File:</label>
@@ -90,7 +92,38 @@
 </div>
 
 <div class="dashboard">
+    {% if warnings %}
+    <div style="background: #ffe0e0; color: #a00; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <h3>Warnings:</h3>
+        <ul>
+            {% for warning in warnings %}
+                <li>{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if selected_file %}
     <div class="gauge-container">
+        {% for gauge in gauges %}
+        <div class="gauge">
+            {{ gauge|safe }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="visual-container">
+        <div class="plot">
+            {{ radar|safe }}
+        </div>
+    </div>
+    {% else %}
+        <div style="background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 30px; border-radius: 12px; margin: 50px auto; width: 500px; text-align: center;">
+            <h2 style="color: #001f77;">No file selected yet!</h2>
+            <p style="color: #555;">Please upload a Python (.py) file to start evaluating documentation quality.</p>
+        </div>
+    {% endif %}
+<!-- <div class="gauge-container">
         {% for gauge in gauges %}
         <div class="gauge">
             {{ gauge|safe }}
@@ -108,7 +141,7 @@
             <p><em>Note:</em> Point size represents the file's line count — larger points indicate larger files.</p>
         </div>
     </div>
-</div>
+</div> -->
 
 </body>
 </html>

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 import numpy as np
-from globals import METRICS_LIST
+from .globals import METRICS_LIST
 
 
 # =============================================================================
