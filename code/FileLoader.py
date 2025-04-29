@@ -37,6 +37,7 @@ class FileLoader:
             for file in files:
                 if file.endswith(".py"):
                     file_path = os.path.join(root, file)
+                    if debug: print(f"Analyzing file: {file_path}")
                     metrics = FileLoader.load_single_file(file_path)
                     if metrics is not None:
                         results.append(metrics)
