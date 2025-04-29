@@ -2,6 +2,10 @@
 import re
 
 from sentence_transformers import SentenceTransformer
+import torch
+_DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model = SentenceTransformer("all-MiniLM-L6-v2", device=str(_DEVICE))
+
 
 METRICS_LIST = [
     "comment_density",
@@ -10,7 +14,7 @@ METRICS_LIST = [
     "accuracy",
     "overall_score"
 ]
-model = SentenceTransformer("all-MiniLM-L6-v2")
+
 DOC_TAG_PATTERN = re.compile(
     r"""
     ^\s*(

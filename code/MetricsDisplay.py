@@ -58,11 +58,22 @@ class MetricsDisplay:
         plt.suptitle(f"{metrics['identifier']} ({metrics['doc_type']})", fontsize=16)
         plt.tight_layout(rect=(0, 0, 1, 0.95))
         plt.show()
+        plt.close(fig)
 
-        print("Filename:", metrics["identifier"])
+
+
+    @staticmethod
+    def print_file_results(file_results: Dict[str, Any]) -> None:
+        """
+        Print the results of the analysis for each file.
+
+        :param file_results: Dictionary containing file metrics.
+        :return: None.
+        """
+        print("Filename:", file_results["identifier"])
         for metric in METRICS_LIST:
-            print(f"{metric}: {metrics[metric]:.3f}")
-        if metrics["identifier"] == "Project Results":
-            print(f"Total lines: {metrics['line_count']}")
-            print(f"Number of files: {metrics['num_files']}")
+            print(f"{metric}: {file_results[metric]:.3f}")
+        if file_results["identifier"] == "Project Results":
+            print(f"Total lines: {file_results['line_count']}")
+            print(f"Number of files: {file_results['num_files']}")
         print()

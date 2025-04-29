@@ -13,6 +13,18 @@ import unixcoder
 
 nltk.download('punkt_tab', quiet=True)
 from globals import model, DOC_TAG_PATTERN, debug
+@lru_cache(maxsize=512)
+def _parse_docstring(ds: str):
+    """
+    Parse a docstring and cache the result.
+
+    This function wraps the `docstring_parser.parse()` method with an LRU cache
+    to improve performance when parsing the same docstring multiple times.
+
+    :param ds: The docstring to parse.
+    :return: A parsed representation of the docstring.
+    """
+    return docstring_parser.parse(ds)
 
 
 # =============================================================================
@@ -103,7 +115,7 @@ class CodeMetrics:
             if debug: print("Method has no docstring")
             return 0.0
         try:
-            parsed = docstring_parser.parse(docstring)
+            parsed = _parse_docstring(docstring)
 
             # General description (minimum 2 words)
             has_desc = parsed.short_description is not None and len(parsed.short_description.split()) >= 2
@@ -210,8 +222,7 @@ class CodeMetrics:
        """
 
         if not docstrings:
-            # TODO: raise RuntimeError(f"Docstrings not found in code: {docstrings}") if preinput parsing
-            return 0.0
+            raise RuntimeError("Docstrings not found in code -- CodeMetrics.compute_conciseness")
 
         # Stop considering docstrings once tags are found (description ended)
         parsed_docstring_descriptions = [
@@ -221,7 +232,6 @@ class CodeMetrics:
         # Remove empty descriptions
         filtered_descriptions = [desc for desc in parsed_docstring_descriptions if desc.strip()]
         if not filtered_descriptions:
-            # TODO: raise RuntimeError(f"Docstrings all empty in code: {docstrings}") if preinput parsing
             return 0.0
         count_sentences = 0
         # Count verbose comments

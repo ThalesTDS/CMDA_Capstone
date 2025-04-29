@@ -8,28 +8,14 @@ from typing import List, Tuple
 # =============================================================================
 class CodeParser:
     @staticmethod
-    def extract_comments(code: str) -> Tuple[List[str], List[str], List[int]]:
+    def extract_comments(code: str, inline: bool = False) -> List[str] | Tuple[List[str], List[str]]:
         """
-        Extract inline comments and docstrings from the provided source code.
+        Extract docstrings and optionally inline comments (deprecated) from the provided source code.
 
         :param code: The source code as a string.
-        :return: A tuple where the first element is a list of inline comments, the second
-                 element is a list of docstring texts, and the third element is a list of comment
-                 and docstring counts.
+        :param inline: If True, include inline comments in the output.
+        :return: List of docstrings or a tuple of (docstrings, inline comments).
         """
-        count_comments = 0
-        inline_comment_lines = []
-        for line in code.splitlines():
-            # strip the line to remove leading and trailing whitespace
-            line = line.strip()
-            if '#' in line:
-                before, after = line.split('#', 1)
-                # 3 characters minimum for code (x=1), 4 for comment (could be more)
-                if len(before.strip()) >= 3 and len(after.strip()) >= 4:
-                    inline_comment_lines.append(line)
-                    count_comments += 1
-
-        count_docstrings = 0
         docstrings = []
         try:
             with warnings.catch_warnings():
@@ -40,9 +26,18 @@ class CodeParser:
                     doc = ast.get_docstring(node)
                     if doc:
                         docstrings.append(doc)
-                        count_docstrings += 1
         except Exception as e:
             print("Error in CodeParser.extractcomments -- AST error:", e)
-        counts = [count_comments, count_docstrings]
+        if inline:
+            inline_comment_lines = []
+            for line in code.splitlines():
+                # strip the line to remove leading and trailing whitespace
+                line = line.strip()
+                if '#' in line:
+                    before, after = line.split('#', 1)
+                    # 3 characters minimum for code (x=1), 4 for comment (could be more)
+                    if len(before.strip()) >= 3 and len(after.strip()) >= 4:
+                        inline_comment_lines.append(line)
+            return docstrings, inline_comment_lines
 
-        return inline_comment_lines, docstrings, counts
+        return docstrings

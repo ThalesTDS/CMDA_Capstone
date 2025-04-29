@@ -17,16 +17,15 @@ class CodeAnalyzer:
         :return: Dictionary with computed metrics and metadata, or None if file does not contain
         enough comments or docstrings to be evaluated.
         """
-        code_lines = code.splitlines()
-        # empty file early drop out optimization
+        code_lines = [ln for ln in code.splitlines() if ln.strip()]  # no blanks
+
         if not code_lines:
+            # empty file early drop out optimization
             return None
-        inline_comments, docstrings, counts = CodeParser.extract_comments(code)
+        docstrings = CodeParser.extract_comments(code)
 
         # As of now we require 1 docstring to be present in the code to be evaluated
-        # TODO: Maybe make this a more useful output, possibly with a notice idk, added print for now
-        count_comments, count_docstrings = counts
-        if not count_docstrings:
+        if not docstrings:
             print(f"File {identifier} does not contain enough docstrings to be evaluated.")
             return None
 
@@ -35,19 +34,16 @@ class CodeAnalyzer:
         conciseness = CodeMetrics.compute_conciseness(docstrings)
         accuracy = CodeMetrics.compute_accuracy_scores(code)
 
-        line_count = sum(1 for line in code_lines if line.strip())
-
         metrics: Dict[str, Any] = {
             "comment_density": density,
             "completeness": completeness,
             "conciseness": conciseness,
-            "accuracy": accuracy
+            "accuracy": accuracy,
+            "line_count": len(code_lines),
+            "identifier": identifier,
         }
 
-        score = ScoreAggregator.compute_file_score(metrics)
-        metrics["overall_score"] = score
-        metrics["line_count"] = line_count
-        metrics["identifier"] = identifier
+        metrics["overall_score"] = ScoreAggregator.compute_file_score(metrics)
         return metrics
 
     @staticmethod

@@ -13,17 +13,22 @@ from ScoreAggregator import ScoreAggregator
 
 class ProjectAnalyzer:
     @staticmethod
-    def display_project_results(file_results: List[Dict[str, Any]]) -> None:
+    def display_project_results(file_results: List[Dict[str, Any]], plot : bool = False) -> None:
         """
-        Display metrics for each file and also display aggregated project metrics.
+        Displays and prints metrics for each file and also display aggregated project metrics.
 
         :param file_results: List of dictionaries with file metrics.
+        :param plot: If True, display the metrics in a grid format.
         :return: None.
         """
         for res in file_results:
-            MetricsDisplay.display_metric_grid(res)
+            if plot:
+                MetricsDisplay.display_metric_grid(res)
+            MetricsDisplay.print_file_results(res)
         project_metrics = ScoreAggregator.aggregate_project_score(file_results)
-        MetricsDisplay.display_metric_grid(project_metrics)
+        if plot:
+            MetricsDisplay.display_metric_grid(project_metrics)
+        MetricsDisplay.print_file_results(project_metrics)
 
     @staticmethod
     def export_to_csv(file_results: List[Dict[str, Any]], output_file: str) -> None:
