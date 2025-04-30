@@ -6,13 +6,15 @@ from typing import List, Tuple
 
 import docstring_parser
 import nltk
+import numpy as np
 import torch
 from nltk.tokenize import sent_tokenize
+nltk.download('punkt_tab', quiet=True)
 
 import unixcoder
+from CodeParser import CodeParser
 
-nltk.download('punkt_tab', quiet=True)
-from globals import model, DOC_TAG_PATTERN, debug
+from globals import model, debug
 
 # Set the device to GPU if available, otherwise fallback to CPU
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -133,7 +135,16 @@ class CodeMetrics:
     @staticmethod
     def assess_function_completeness(func_node: ast.FunctionDef, docstring: str | None) -> float:
         """
-        Compute the completeness score for a single function and its docstring.
+        Assess the completeness of a function's docstring.
+
+        This function evaluates the provided docstring against the function definition
+        to determine if it includes a general description, parameter documentation,
+        and return type information. The completeness score is calculated based on
+        these elements.
+
+        :param func_node: The AST node representing the function definition.
+        :param docstring: The docstring associated with the function, or None if absent.
+        :return: A float score between 0.0 (incomplete) and 1.0 (fully complete).
         """
         if not docstring:
             if debug: print("Method has no docstring")
@@ -175,24 +186,6 @@ class CodeMetrics:
             return 0.0
 
     @staticmethod
-    def get_function_doc_pairs(code: str) -> List[Tuple[ast.FunctionDef, str]]:
-        """
-        Extract (function_node, docstring) pairs from source code.
-        """
-        pairs = []
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", SyntaxWarning)
-            tree = ast.parse(code)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    doc = ast.get_docstring(node)
-                    pairs.append((node, doc))
-        except Exception as e:
-            print("AST parsing error in get_function_doc_pairs:", e)
-        return pairs
-
-    @staticmethod
     def compute_completeness(code: str) -> float:
         """
         Check if the docstring contains required elements based on function/class definition.
@@ -203,28 +196,17 @@ class CodeMetrics:
         :param code: The full source code containing the function/class.
         :return: A completeness score between 0 (incomplete) and 1 (fully complete).
         """
-        function_doc_pairs = CodeMetrics.get_function_doc_pairs(code)
+        function_doc_pairs = CodeParser.get_function_doc_pairs(code)
         if not function_doc_pairs:
             print(f"Function docstring pairs not found in code: {code}")
             return 0.0
-            # raise RuntimeError(f"Function docstring pairs not found in code: {code}")
 
         scores = []
         for func_node, docstring in function_doc_pairs:
             score = CodeMetrics.assess_function_completeness(func_node, docstring)
             scores.append(score)
 
-        return sum(scores) / len(scores)
-
-    @staticmethod
-    def extract_description_text(docstring: str) -> str:
-        """
-        Extracts the free-text part of the docstring before any doc section tags.
-        """
-        match = DOC_TAG_PATTERN.search(docstring)
-        if match:
-            return docstring[:match.start()].strip()
-        return docstring.strip()
+        return np.round(sum(scores) / len(scores), 4)
 
     @staticmethod
     def compute_conciseness(docstrings: List[str], verbose_threshold: int = 20,
@@ -250,7 +232,7 @@ class CodeMetrics:
 
         # Stop considering docstrings once tags are found (description ended)
         parsed_docstring_descriptions = [
-            CodeMetrics.extract_description_text(doc).strip()
+            CodeParser.extract_description_text(doc).strip()
             for doc in docstrings
         ]
         # Remove empty descriptions
@@ -291,7 +273,7 @@ class CodeMetrics:
     def get_description_and_code(code: str) -> List[Tuple[str, str]]:
         """
         Extracts (docstring, cleaned function body) pairs from Python source code.
-        Cleans out comments while preserving real indentation and structure.
+        Cleans out comments while preserving structure.
 
         :param code: String containing the Python source code.
         :return: List of (docstring, function_body) tuples.
@@ -300,79 +282,64 @@ class CodeMetrics:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", SyntaxWarning)
             tree = ast.parse(code)
+
         functions = []
         all_docstring_lines = set()
-        function_ranges = []  # (start_line, end_line)
+        function_bodies = []
 
-        # First pass: collect docstring lines and function ranges
+        # Preprocess: collect all functions and their ranges
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Str):
-                    docstring_node = node.body[0]
-                    doc_start = docstring_node.lineno - 1
-                    doc_end = docstring_node.end_lineno
+                start_line = node.lineno - 1
+                indent = len(lines[start_line]) - len(lines[start_line].lstrip())
+                end_line = start_line + 1
+                while end_line < len(lines):
+                    line = lines[end_line]
+                    if line.strip() == "" or line.lstrip().startswith("#"):
+                        end_line += 1
+                        continue
+                    current_indent = len(line) - len(line.lstrip())
+                    if current_indent <= indent:
+                        break
+                    end_line += 1
+                function_bodies.append((start_line, end_line, node))
+
+                # Capture docstring line spans
+                if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value,
+                                                                                   (ast.Str, ast.Constant)):
+                    doc_start = node.body[0].lineno - 1
+                    doc_end = node.body[0].end_lineno
                     all_docstring_lines.update(range(doc_start, doc_end))
 
-                start_line = node.lineno - 1
-                function_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
-                end_line = start_line + 1
+        # Sort by start_line to ensure nested functions come after parents
+        function_bodies.sort()
 
-                while end_line < len(lines):
-                    line = lines[end_line]
-                    if line.strip() == "" or line.lstrip().startswith("#"):
-                        end_line += 1
-                        continue
-                    current_indent = len(line) - len(line.lstrip())
-                    if current_indent <= function_indent:
-                        break
-                    end_line += 1
+        # Create a map of nested function spans to skip in outer bodies
+        all_function_spans = [(start, end) for start, end, _ in function_bodies]
 
-                function_ranges.append((start_line, end_line))
+        for start_line, end_line, node in function_bodies:
+            full_docstring = ast.get_docstring(node) or ""
+            description = CodeParser.extract_description_text(full_docstring)
 
-        # Second pass: extract and clean functions
-        for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                full_docstring = ast.get_docstring(node) or ""
-                description = CodeMetrics.extract_description_text(full_docstring)
-                start_line = node.lineno - 1
-                function_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
-                end_line = start_line + 1
+            cleaned_lines = []
+            for idx in range(start_line, end_line):
+                # Skip docstring lines
+                if idx in all_docstring_lines:
+                    continue
 
-                while end_line < len(lines):
-                    line = lines[end_line]
-                    if line.strip() == "" or line.lstrip().startswith("#"):
-                        end_line += 1
-                        continue
-                    current_indent = len(line) - len(line.lstrip())
-                    if current_indent <= function_indent:
-                        break
-                    end_line += 1
+                # Skip lines that belong to nested functions
+                if any(start_line < n_start <= idx < n_end for n_start, n_end in all_function_spans):
+                    continue
 
-                function_lines = lines[start_line:end_line]
+                line = lines[idx]
+                stripped = line.lstrip()
+                if stripped.startswith("#") or stripped == "":
+                    continue
+                code_without_comment = re.split(r'\s+#', line, maxsplit=1)[0]
+                cleaned_lines.append(code_without_comment.rstrip())
 
-                # Remove docstring lines and nested function lines
-                cleaned_lines = []
-                for idx, line in enumerate(function_lines):
-                    absolute_idx = start_line + idx
-                    # Skip if line is part of any docstring
-                    if absolute_idx in all_docstring_lines:
-                        continue
-                    # Skip if line is inside another nested function (but allow the main function)
-                    inside_other_function = any(
-                        other_start <= absolute_idx < other_end and not (other_start == start_line)
-                        for (other_start, other_end) in function_ranges
-                    )
-                    if inside_other_function:
-                        continue
-                    # Clean comments
-                    stripped = line.lstrip()
-                    if stripped.startswith("#") or stripped == "":
-                        continue
-                    code_without_comment = re.split(r'\s+#', line, maxsplit=1)[0]
-                    cleaned_lines.append(code_without_comment.rstrip())
-
-                cleaned_function_body = '\n'.join(cleaned_lines)
-                functions.append((description, cleaned_function_body))
+            cleaned_function_body = '\n'.join(cleaned_lines)
+            functions.append((description, cleaned_function_body))
 
         return functions
 

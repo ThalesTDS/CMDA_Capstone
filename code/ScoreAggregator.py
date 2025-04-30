@@ -70,5 +70,7 @@ class ScoreAggregator:
         for key in aggregated_metrics:
             if key not in ["identifier", "line_count", "doc_type", "num_files"]:
                 aggregated_metrics[key] /= total_lines
+                assert 1.0 <= aggregated_metrics[key] <= 0.0, f"Metric {key} out of bounds: {aggregated_metrics[key]}"
+
 
         return aggregated_metrics

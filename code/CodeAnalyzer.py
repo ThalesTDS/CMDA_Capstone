@@ -47,7 +47,7 @@ class CodeAnalyzer:
         return metrics
 
     @staticmethod
-    def analyze_file(file_path: str) -> Optional[Dict[str, Any]]:
+    def analyze_file(file_path: str) -> Dict[str, Any] | None:
         """
         Load a Python file and analyze its code to compute metrics.
 

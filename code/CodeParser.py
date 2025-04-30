@@ -2,6 +2,8 @@ import ast
 import warnings
 from typing import List, Tuple
 
+from globals import DOC_TAG_PATTERN
+
 
 # =============================================================================
 # Code Parsing & Extraction
@@ -41,3 +43,40 @@ class CodeParser:
             return docstrings, inline_comment_lines
 
         return docstrings
+
+    @staticmethod
+    def get_function_doc_pairs(code: str) -> List[Tuple[ast.FunctionDef, str]]:
+        """
+        Extracts all function definitions and their associated docstrings from the given source code.
+
+        :param code: The source code as a string.
+        :return: A list of tuples, where each tuple contains a function definition node and its docstring.
+        """
+        pairs = []
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    doc = ast.get_docstring(node)
+                    pairs.append((node, doc))
+        except Exception as e:
+            print("AST parsing error in get_function_doc_pairs:", e)
+        return pairs
+
+    @staticmethod
+    def extract_description_text(docstring: str) -> str:
+        """
+        Extract the free-text part of a docstring before any section tags.
+
+        This function identifies and removes structured tags (e.g., parameter or return
+        sections) from a docstring, leaving only the descriptive text.
+
+        :param docstring: The full docstring to process.
+        :return: The descriptive text portion of the docstring.
+        """
+        match = DOC_TAG_PATTERN.search(docstring)
+        if match:
+            return docstring[:match.start()].strip()
+        return docstring.strip()
