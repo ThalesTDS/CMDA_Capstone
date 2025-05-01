@@ -1,9 +1,9 @@
-from typing import Dict, Any, Optional
+import re
+from typing import Dict, Any
 
-from CodeMetrics import CodeMetrics
-from CodeParser import CodeParser
-from ScoreAggregator import ScoreAggregator
-from globals import trim_file_path
+from src.CodeMetrics import CodeMetrics
+from src.CodeParser import CodeParser
+from src.ScoreAggregator import ScoreAggregator
 
 
 class CodeAnalyzer:
@@ -60,4 +60,16 @@ class CodeAnalyzer:
         except Exception as e:
             print(f"Error reading {file_path}: {e}")
             return None
-        return CodeAnalyzer.analyze_code(code, identifier=trim_file_path(file_path))
+        return CodeAnalyzer.analyze_code(code, identifier=CodeAnalyzer.trim_file_path(file_path))
+
+    @staticmethod
+    def trim_file_path(file_path: str) -> str:
+        """
+        Trim the file path to begin from the 'data/' directory if present.
+
+        :param file_path: Original file path.
+        :return: Trimmed file path.
+        """
+        normalized_path = file_path.replace("\\", "/")
+        match = re.search(r'data/.*', normalized_path)
+        return match.group(0) if match else file_path

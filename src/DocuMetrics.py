@@ -3,10 +3,10 @@ from typing import List, Dict, Any
 
 import pandas as pd
 
-from FileLoader import FileLoader
-from MetricsDisplay import MetricsDisplay
-from ScoreAggregator import ScoreAggregator
-from globals import debug
+from src.FileLoader import FileLoader
+from src.MetricsDisplay import MetricsDisplay
+from src.ScoreAggregator import ScoreAggregator
+from src.globals import debug
 
 
 # =============================================================================
@@ -52,7 +52,7 @@ class ProjectAnalyzer:
         df.to_csv(output_file, index=False)
 
     @staticmethod
-    def analyze_and_export(directory: str, output_file: str = "exports/all_metrics_combined.csv") -> None:
+    def analyze_and_export(directory: str, output_file: str = "outputs/all_metrics_combined.csv") -> None:
         """
         Analyze all Python files in a directory and display both individual and aggregated metrics.
 
@@ -66,7 +66,7 @@ class ProjectAnalyzer:
         ProjectAnalyzer.export_to_csv(file_results, project_metrics, output_file)
 
     @staticmethod
-    def cleanup():
+    def cleanup() -> None:
         """
         Perform cleanup operations to release resources and terminate the program.
 

@@ -1,8 +1,8 @@
 import os
 from typing import List, Dict, Any, Optional
 
-from CodeAnalyzer import CodeAnalyzer
-from globals import debug
+from src.CodeAnalyzer import CodeAnalyzer
+from src.globals import debug
 
 
 class FileLoader:

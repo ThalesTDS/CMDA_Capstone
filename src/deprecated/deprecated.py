@@ -1,3 +1,6 @@
+# Deprecated code, in functional state, preserved for potential future use
+
+
 # CodeMetrics.py
 # noinspection all
 def _embed_batch(texts: list[str]) -> torch.Tensor:

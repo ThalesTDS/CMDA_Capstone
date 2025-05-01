@@ -8,19 +8,23 @@ import docstring_parser
 import nltk
 import numpy as np
 import torch
+from sentence_transformers import SentenceTransformer
 from nltk.tokenize import sent_tokenize
 nltk.download('punkt_tab', quiet=True)
 
-import unixcoder
-from CodeParser import CodeParser
+from src import unixcoder
+from src.CodeParser import CodeParser
 
-from globals import model, debug
+from src.globals import debug
 
 # Set the device to GPU if available, otherwise fallback to CPU
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Initialize the UniXcoder model and move it to the selected device
 _unixcoder = unixcoder.UniXcoder("microsoft/unixcoder-base").to(_device).eval()
+
+# Initialize the MiniLM-L6-v2 model for semantic comparison within conciseness metric
+_miniLM = SentenceTransformer("all-MiniLM-L6-v2", device=str(_device))
 
 
 def _embed(text: str) -> torch.Tensor:
@@ -249,8 +253,8 @@ class CodeMetrics:
                 if len(s.split()) > verbose_threshold:
                     verbose_count += 1
 
-        embeddings = model.encode(filtered_descriptions)
-        similarities = model.similarity(embeddings, embeddings).numpy()
+        embeddings = _miniLM.encode(filtered_descriptions)
+        similarities = _miniLM.similarity(embeddings, embeddings).numpy()
         # since similarity() returns a tensor object, we want a 2D array for simplicity
 
         row = 0
@@ -340,6 +344,9 @@ class CodeMetrics:
 
             cleaned_function_body = '\n'.join(cleaned_lines)
             functions.append((description, cleaned_function_body))
+        if debug:
+            for desc, body in functions:
+                print(f"Description: {desc}\n Body: {body}")
 
         return functions
 
