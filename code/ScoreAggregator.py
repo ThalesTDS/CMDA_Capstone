@@ -40,6 +40,8 @@ class ScoreAggregator:
         :return: Aggregated metrics dictionary.
         :raises ValueError: If the total line count is zero.
         """
+
+        
         total_lines = sum(res.get("line_count", 0) for res in file_results)
         if total_lines == 0:
             raise ValueError("No lines found in the project.")

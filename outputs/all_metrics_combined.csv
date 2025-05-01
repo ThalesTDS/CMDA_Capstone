@@ -1,0 +1,5 @@
+comment_density,completeness,conciseness,accuracy,line_count,identifier,overall_score,doc_type,level,num_files
+1.0,0.7,1.0,0.39378705620765686,52,data/sample_mildly_acc.py,0.8193787056207658,Human,file,
+0.9487179487179487,0.7,0.9454545454545454,0.52189040184021,60,data/sample_very_acc.py,0.8058953338903146,Human,file,
+1.0,0.7,1.0,0.25015947222709656,52,data/sample_not_acc.py,0.8050159472227096,Human,file,
+0.9812382739212007,0.7000000000000001,0.9800443458980044,0.39511368042085226,164,Project Results,0.8098917193980464,Human,project,3.0

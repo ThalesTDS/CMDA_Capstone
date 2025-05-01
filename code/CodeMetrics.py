@@ -10,7 +10,54 @@ from sentence_transformers import util
 import unixcoder
 import torch
 nltk.download('punkt_tab', quiet=True)
+<<<<<<< Updated upstream:code/CodeMetrics.py
 from globals import model, DOC_TAG_PATTERN, debug
+=======
+
+from documetrics import unixcoder
+from documetrics.CodeParser import CodeParser
+
+from documetrics.globals import debug
+
+# Set the device to GPU if available, otherwise fallback to CPU
+_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Initialize the UniXcoder model and move it to the selected device
+_unixcoder = unixcoder.UniXcoder("microsoft/unixcoder-base-nine").to(_device).eval()
+
+# Initialize the MiniLM-L6-v2 model for semantic comparison within conciseness metric
+_miniLM = SentenceTransformer("all-MiniLM-L6-v2", device=str(_device))
+
+
+def _embed(text: str) -> torch.Tensor:
+    """
+    Generate an L2-normalized embedding for the given text using the UniXcoder model.
+
+    This function tokenizes the input text, processes it through the UniXcoder model,
+    and normalizes the resulting embedding vector using L2 normalization.
+
+    :param text: The input text to embed.
+    :return: A PyTorch tensor containing the L2-normalized embedding.
+    """
+    token_ids = _unixcoder.tokenize([text], max_length=512, mode="<encoder-only>")
+    src = torch.tensor(token_ids).to(_device)
+    _, emb = _unixcoder(src)
+    return torch.nn.functional.normalize(emb, p=2, dim=1)
+
+
+@lru_cache(maxsize=512)
+def _parse_docstring(ds: str):
+    """
+    Parse a docstring and cache the result.
+
+    This function wraps the `docstring_parser.parse()` method with an LRU cache
+    to improve performance when parsing the same docstring multiple times.
+
+    :param ds: The docstring to parse.
+    :return: A parsed representation of the docstring.
+    """
+    return docstring_parser.parse(ds)
+>>>>>>> Stashed changes:src/documetrics/CodeMetrics.py
 
 
 # =============================================================================
@@ -277,6 +324,7 @@ class CodeMetrics:
         
 
     @staticmethod
+<<<<<<< Updated upstream:code/CodeMetrics.py
     def compute_accuracy_scores(inline_comments: List[str]) -> float:
         accuracy_scores = []
         for line in inline_comments:
@@ -285,3 +333,26 @@ class CodeMetrics:
             if debug:
                 print(f"Code Line: {code_part} Comment: {comment_part}  Accuracy Score: {accuracy_scores[-1]}")
         return np.mean(accuracy_scores) if accuracy_scores else 0.0
+=======
+    def compute_accuracy_scores(code: str) -> float:
+        """
+        Compute the accuracy score between code and its corresponding docstring.
+
+        This function extracts pairs of docstrings and their associated code,
+        generates embeddings for both using the `_embed` function, and calculates
+        the cosine similarity between the embeddings. The mean similarity score
+        is returned as the accuracy score.
+
+        :param code: The Python source code as a string.
+        :return: A float representing the mean similarity score between code and docstrings.
+        """
+        pairs = CodeMetrics.get_description_and_code(code)
+        
+        if not pairs:
+            return 0.0
+
+        flat = [txt for p in pairs for txt in p]  # [code0, doc0, …]
+        embeds = torch.cat([_embed(t) for t in flat])
+        sims = torch.einsum("ac,ac->a", embeds[0::2], embeds[1::2])
+        return sims.mean().item()
+>>>>>>> Stashed changes:src/documetrics/CodeMetrics.py

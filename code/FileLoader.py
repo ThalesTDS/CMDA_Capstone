@@ -57,4 +57,5 @@ class FileLoader:
         if not os.path.exists(target_dir):
             print(f"Directory not found: {base_dir}")
             raise FileNotFoundError
+        print(target_dir)
         return target_dir
