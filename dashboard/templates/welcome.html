@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Welcome | Documentation Dashboard{% endblock %}
+{% block content %}
+
+<style>
+    .carousel-wrapper {
+      perspective: 1200px;
+      height: 350px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 2rem;
+    }
+    
+    .carousel {
+      width: 300px;
+      height: 220px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1s ease-in-out;
+    }
+    
+    .carousel:hover {
+      animation-play-state: paused;
+    }
+    
+    .card {
+      width: 280px;
+      height: 200px;
+      position: absolute;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 1rem;
+      box-sizing: border-box;
+      text-align: center;
+      color: #2c3e50;
+      cursor: pointer;
+    }
+    
+    /* Position cards at equal angles */
+    .card:nth-child(1)  { transform: rotateY(  0deg) translateZ(400px); }
+    .card:nth-child(2)  { transform: rotateY( 60deg) translateZ(400px); }
+    .card:nth-child(3)  { transform: rotateY(120deg) translateZ(400px); }
+    .card:nth-child(4)  { transform: rotateY(180deg) translateZ(400px); }
+    .card:nth-child(5)  { transform: rotateY(240deg) translateZ(400px); }
+    .card:nth-child(6)  { transform: rotateY(300deg) translateZ(400px); }
+    
+    @keyframes spin {
+      from { transform: rotateY(0deg); }
+      to   { transform: rotateY(-360deg); }
+    }
+</style>
+    <div class="carousel-wrapper">
+      <div class="carousel" id="carousel-3d">
+        <div class="card">
+          <h3>Welcome</h3>
+          <p>This dashboard evaluates the quality of documentation in Python code — for both human and AI-generated comments.</p>
+        </div>
+        <div class="card">
+          <h3>Goals</h3>
+          <ul style="text-align:left;">
+            <li>Comment Density</li>
+            <li>Completeness</li>
+            <li>Conciseness</li>
+            <li>Accuracy</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>How to Use</h3>
+          <ol style="text-align:left;">
+            <li>Upload a .py file</li>
+            <li>Let the system analyze it</li>
+            <li>Explore EDA & metrics</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3>Why It Matters</h3>
+          <p>blah.</p>
+        </div>
+        <div class="card">
+          <h3>Tips</h3>
+          <p>Focus on quality over quantity. Avoid repeating code in comments. Use your results here to improve!</p>
+        </div>
+        <div class="card">
+          <h3>Get Started</h3>
+          <p>Upload a Python file now using the button above to see documentation quality insights.</p>
+        </div>
+      </div>
+    </div>
+    <div class="carousel-controls" style="text-align: center; margin-top: 1rem;">
+        <button id="prevBtn">◀</button>
+        <button id="pauseBtn">⏸</button>
+        <button id="nextBtn">▶</button>
+    </div>
+    <script>
+        let angle = 0;
+        const step = 60;  // 360 / 6 cards
+        let autoRotate = true;
+        let intervalId = null;
+        
+        const carousel = document.getElementById('carousel-3d');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        
+        // Rotation function
+        function rotateCarousel(direction) {
+            angle += direction * step;
+            carousel.style.transform = `rotateY(${angle}deg)`;
+        }
+        
+        // Auto rotate
+        function startAutoRotate() {
+            if (!intervalId) {
+                intervalId = setInterval(() => rotateCarousel(-1), 4000);
+            }
+        }
+        
+        function stopAutoRotate() {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+        
+        pauseBtn.onclick = () => {
+            autoRotate = !autoRotate;
+            if (autoRotate) {
+                pauseBtn.textContent = "⏸";
+                startAutoRotate();
+            } else {
+                pauseBtn.textContent = "▶";
+                stopAutoRotate();
+            }
+        };
+        
+        nextBtn.onclick = () => rotateCarousel(-1);
+        prevBtn.onclick = () => rotateCarousel(1);
+        
+        // Pause on hover
+        carousel.addEventListener('mouseenter', stopAutoRotate);
+        carousel.addEventListener('mouseleave', () => {
+            if (autoRotate) startAutoRotate();
+        });
+        
+        // Start auto-rotation
+        startAutoRotate();
+        
+        </script>
+    <h2>How We Evaluate Documentation</h2>
+    <ul>
+        <li><strong>Comment Density:</strong> % of lines that are comments — helps assess whether code is well-documented.</li>
+        <li><strong>Completeness:</strong> Checks if key elements like inputs/outputs are explained.</li>
+        <li><strong>Accuracy:</strong> Are the comments truthful and aligned with what the code does?</li>
+        <li><strong>Conciseness:</strong> Measures clarity without unnecessary repetition.</li>
+        <li><strong>Overall Score:</strong> A combined score reflecting all of the above.</li>
+      </ul>
+      
+    
+{% endblock %}

@@ -13,8 +13,9 @@ import plotly.express as px
 app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.jinja_env.globals.update(request=request) # to request from htmls to avoid returning sm
 
-# Load initial dataset
+# initial dataset
 data_path = "mydashboard/all_metrics_combined.csv"
 
 if os.path.exists(data_path):
@@ -25,6 +26,43 @@ else:
         'identifier', 'comment_density', 'completeness', 'accuracy',
         'conciseness', 'overall_score', 'line_count', 'doc_type', 'level'
     ])
+
+
+def plot_avg_metric_bar(df):
+    file_df = df[df['level'] == 'file']
+    metrics = ['accuracy', 'completeness', 'conciseness', 'comment_density', 'overall_score']
+    avg_scores = file_df.groupby('doc_type')[metrics].mean().reset_index()
+
+    melted = avg_scores.melt(id_vars='doc_type', var_name='Metric', value_name='Score')
+    fig = px.bar(melted, x='Metric', y='Score', color='doc_type', barmode='group',
+                    title="Average Metric Scores by Doc Type",
+                    labels={'doc_type': 'Documentation Type'})
+
+    fig.update_layout(margin=dict(t=40, b=40, l=40, r=40), height=400)
+    return fig.to_html(full_html=False)
+
+def plot_avg_radar(df):
+    file_df = df[df['level'] == 'file']
+    metrics = ['accuracy', 'completeness', 'conciseness', 'comment_density', 'overall_score']
+
+    radar_data = file_df.groupby('doc_type')[metrics].mean()
+    fig = go.Figure()
+
+    for doc_type in radar_data.index:
+        fig.add_trace(go.Scatterpolar(
+            r=radar_data.loc[doc_type].values,
+            theta=metrics,
+            fill='toself',
+            name=doc_type
+        ))
+
+    fig.update_layout(
+        title="Average Documentation Profile (Radar)",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+        showlegend=True,
+        height=400
+    )
+    return fig.to_html(full_html=False)
 
 def generate_gauges(selected_file):
     if not selected_file:
@@ -197,10 +235,9 @@ def generate_visuals(selected_file, df):
     return gauges, radar, scatter, file_options
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/dashboard", methods=["GET", "POST"])
 def dashboard():
     global df
-    warnings_list = []  # Always define warnings_list first
 
     if request.method == "POST":
         print("Received form data:")
@@ -219,7 +256,10 @@ def dashboard():
 
         for uploaded_file in uploaded_files:
             if uploaded_file and uploaded_file.filename.endswith(".py"):
-                file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+                # Strip away any folder structure (get just the filename)
+                filename = os.path.basename(uploaded_file.filename)
+                
+                file_path = os.path.join(UPLOAD_FOLDER, filename)
                 uploaded_file.save(file_path)
                 print(f"Saved uploaded file to {file_path}")
 
@@ -228,7 +268,7 @@ def dashboard():
         try:
             ProjectAnalyzer.analyze_and_export(
                 UPLOAD_FOLDER,
-                "mydashboard/all_metrics_combined.csv"
+                "dashboard/all_metrics_combined.csv"
             )
             print("ProjectAnalyzer completed successfully.")
         except Exception as e:
@@ -237,7 +277,7 @@ def dashboard():
 
          # Reload the DataFrame
         try:
-            df = pd.read_csv("mydashboard/all_metrics_combined.csv")
+            df = pd.read_csv("dashboard/all_metrics_combined.csv")
             print("Successfully reloaded all_metrics_combined.csv")
         except Exception as e:
             print(f"Error loading CSV: {e}")         
@@ -247,6 +287,13 @@ def dashboard():
     # --- After POST or for normal GET, prepare dashboard view ---
 
     selected_file = request.args.get("file")
+
+    line_count = None
+
+    # Extract from the DataFrame if available
+    selected_row = df[df['identifier'].str.strip() == selected_file]
+    if not selected_row.empty and 'line_count' in selected_row.columns:
+        line_count = int(selected_row.iloc[0]['line_count'])
 
     if not selected_file or selected_file not in df['identifier'].values:
         fallback_rows = df[df['level'].isin(['file', 'project'])]
@@ -260,9 +307,8 @@ def dashboard():
 
     # Show both files and project-level entry in dropdown/tabs
     display_rows = df[df['level'].isin(['file', 'project'])].copy()
-    display_rows['filename'] = display_rows['identifier'].apply(
-        lambda path: os.path.basename(path) if path != "Project Results" else "Summary"
-    )
+    display_rows['filename'] = display_rows['identifier'].apply(os.path.basename)
+
     # Sort so "Project Results" appears first
     display_rows['sort_order'] = display_rows['identifier'].apply(
     lambda x: 0 if x == "Project Results" else 1
@@ -272,20 +318,49 @@ def dashboard():
     file_options = list(zip(display_rows['identifier'], display_rows['filename']))
     selected_filename = None
     for identifier, fname in file_options:
+        print("identifier ", identifier)
+        print("selected_file ", selected_file)
         if identifier == selected_file:
             selected_filename = fname
             break
+
+    (best_metric_name, best_metric_val,
+        worst_metric_name, worst_metric_val,
+        rank, total_files,
+        best_file, best_score, worst_file, worst_score,
+        outperform_count, total_comparisons, ranked_files) = summary(df, selected_file)
+    
+    project_bar_plot = None
+    project_radar_plot = None
+
+    if selected_file == "Project Results":
+        project_bar_plot = plot_avg_metric_bar(df)
+        project_radar_plot = plot_avg_radar(df)
 
     return render_template(
         "dashboard.html",
         gauges=gauges,
         radar=radar,
         scatter=scatter,
+        line_count = line_count,
         file_options=file_options,
         selected_file=selected_file,
         selected_filename=selected_filename,
-        warnings=warnings_list  # Always pass warnings (empty list if no upload)
-    )
+        best_metric_name=best_metric_name,
+        best_metric_val=best_metric_val,
+        worst_metric_name=worst_metric_name,
+        worst_metric_val=worst_metric_val,
+        rank=rank,
+        total_files=total_files,
+        best_file=best_file,
+        best_score=best_score,
+        worst_file=worst_file,
+        worst_score=worst_score,
+        outperform_count=outperform_count,
+        total_comparisons=total_comparisons,
+        ranked_files=ranked_files,
+        project_bar_plot=project_bar_plot,
+        project_radar_plot=project_radar_plot,)
 
 @app.route("/download_metrics", methods=["GET"])
 def download_metrics():
@@ -310,6 +385,107 @@ def download_metrics():
         as_attachment=True,
         download_name=f"{os.path.basename(selected_file)}_metrics.csv"
     )
+
+@app.route("/", methods=["GET"])
+def welcome_page():
+    return render_template("welcome.html")
+
+def summary(df, selected_file, exclude_metrics=None):
+    if exclude_metrics is None:
+        exclude_metrics = ['overall_score']
+
+    selected_file = selected_file.strip()
+    
+    # Get the row for the selected file
+    selected_row = df[df['identifier'].str.strip() == selected_file]
+    if selected_row.empty:
+        print("Selected row is empty")
+        return (None,) * 12
+
+    selected_row = selected_row.iloc[0]
+    level = selected_row.get('level', 'NA')
+
+    # Prepare cleaned and ranked file-level DataFrame once
+    file_df = df[df['level'] == 'file'].copy()
+    file_df = file_df.dropna(subset=['overall_score'])
+    file_df = file_df[file_df['overall_score'].apply(lambda x: isinstance(x, (int, float)))]
+    file_df['rank'] = file_df['overall_score'].rank(method='min', ascending=False).astype(int)
+    file_df = file_df.sort_values(by='rank').reset_index(drop=True)
+
+    # Prepare ranked file list for display
+    ranked_files = file_df[['identifier', 'overall_score']].copy()
+    ranked_files['filename'] = ranked_files['identifier'].apply(os.path.basename)
+    ranked_files = ranked_files.sort_values(by='overall_score', ascending=False).reset_index(drop=True)
+
+    # --------------------------
+    # Handle Project Summary
+    # --------------------------
+
+    if level == 'project':
+        # 1. Best file
+        best_row = file_df.iloc[0]
+        best_file = os.path.basename(best_row['identifier'])
+        best_score = round(best_row['overall_score'], 2)
+
+        # 2. Worst file
+        worst_row = file_df.iloc[-1]
+        worst_file = os.path.basename(worst_row['identifier'])
+        worst_score = round(worst_row['overall_score'], 2)
+
+        # 3. LLM vs Human comparison
+        llm_files = file_df[file_df['doc_type'] == 'LLM']
+        human_files = file_df[file_df['doc_type'] == 'Human']
+
+        outperform_count = 0
+        total_comparisons = 0
+
+        for _, llm_row in llm_files.iterrows():
+            llm_path = llm_row['identifier']
+            # Match on base path (strip _llm)
+            target_human_path = llm_path.replace('_llm', '')
+            human_match = human_files[human_files['identifier'].str.replace('_llm', '') == target_human_path]
+            if not human_match.empty:
+                human_score = human_match.iloc[0]['overall_score']
+                if llm_row['overall_score'] > human_score:
+                    outperform_count += 1
+                total_comparisons += 1
+
+        total_files = file_df.shape[0]
+
+        return (
+            None, None, None, None, None, total_files,
+            best_file, best_score, worst_file, worst_score,
+            outperform_count, total_comparisons, ranked_files
+        )
+
+    # --------------------------
+    # Handle Individual File
+    # --------------------------
+    ranked_row = file_df[file_df['identifier'].str.strip() == selected_file]
+    if ranked_row.empty:
+        return (None,) * 12
+
+    ranked_row = ranked_row.iloc[0]
+
+    metric_values = {
+        col: ranked_row[col]
+        for col in df.columns
+        if col not in exclude_metrics and isinstance(ranked_row[col], (int, float))
+    }
+
+    best_metric = max(metric_values, key=metric_values.get)
+    worst_metric = min(metric_values, key=metric_values.get)
+
+    return (
+        best_metric,
+        round(metric_values[best_metric], 2),
+        worst_metric,
+        round(metric_values[worst_metric], 2),
+        int(ranked_row['rank']),
+        file_df.shape[0],
+        None, None, None, None, None, None, ranked_files
+    )
+
 print("Reached app.run()")
 if __name__ == "__main__":
     app.run(debug=True, port=5007, use_reloader=False)
