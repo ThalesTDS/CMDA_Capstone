@@ -1,9 +1,9 @@
 import re
 from typing import Dict, Any
 
-from src.CodeMetrics import CodeMetrics
-from src.CodeParser import CodeParser
-from src.ScoreAggregator import ScoreAggregator
+from documetrics.CodeMetrics import CodeMetrics
+from documetrics.CodeParser import CodeParser
+from documetrics.ScoreAggregator import ScoreAggregator
 
 
 class CodeAnalyzer:

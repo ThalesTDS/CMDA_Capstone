@@ -3,10 +3,10 @@ from typing import List, Dict, Any
 
 import pandas as pd
 
-from src.FileLoader import FileLoader
-from src.MetricsDisplay import MetricsDisplay
-from src.ScoreAggregator import ScoreAggregator
-from src.globals import debug
+from documetrics.FileLoader import FileLoader
+from documetrics.MetricsDisplay import MetricsDisplay
+from documetrics.ScoreAggregator import ScoreAggregator
+from documetrics.globals import debug
 
 
 # =============================================================================

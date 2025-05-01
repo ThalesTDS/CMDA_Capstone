@@ -2,7 +2,7 @@ import ast
 import warnings
 from typing import List, Tuple
 
-from src.globals import DOC_TAG_PATTERN
+from documetrics.globals import DOC_TAG_PATTERN
 
 
 # =============================================================================

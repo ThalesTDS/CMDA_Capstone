@@ -12,10 +12,10 @@ from sentence_transformers import SentenceTransformer
 from nltk.tokenize import sent_tokenize
 nltk.download('punkt_tab', quiet=True)
 
-from src import unixcoder
-from src.CodeParser import CodeParser
+from documetrics import unixcoder
+from documetrics.CodeParser import CodeParser
 
-from src.globals import debug
+from documetrics.globals import debug
 
 # Set the device to GPU if available, otherwise fallback to CPU
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

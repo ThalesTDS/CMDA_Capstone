@@ -1,13 +1,13 @@
 import os
 from typing import List, Dict, Any, Optional
 
-from src.CodeAnalyzer import CodeAnalyzer
-from src.globals import debug
+from documetrics.CodeAnalyzer import CodeAnalyzer
+from documetrics.globals import debug
 
 
 class FileLoader:
     @staticmethod
-    def load_single_file(file_path: str) -> Optional[Dict[str, Any]]:
+    def load_single_file(file_path: str) -> Dict[str, Any] | None:
         """
         Load and analyze a single Python file.
 
@@ -51,7 +51,7 @@ class FileLoader:
         :param sub_folder_name: Optional data subfolder; if None, entire data directory is used.
         :return: Constructed path as a string.
         """
-        base_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+        base_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
         target_dir = base_dir if sub_folder_name is None else os.path.join(base_dir, sub_folder_name)
 
         if debug: print(f"Analyzing files in directory: {target_dir}")
