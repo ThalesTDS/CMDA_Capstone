@@ -199,30 +199,29 @@ def generate_visuals(selected_file, df):
 
 @app.route("/", methods=["GET", "POST"])
 def dashboard():
-    print("Dashboard route accessed!")
     global df
     warnings_list = []  # Always define warnings_list first
 
     if request.method == "POST":
-        print("📥 Received form data:")
+        print("Received form data:")
         print("Request.files keys:", request.files.keys())
         print("Uploaded files:", [f.filename for f in request.files.getlist('files')])
 
         if 'files' not in request.files:
-            print("🚨 No 'files' field found in form!")
+            print("No 'files' field found in form!")
             return redirect("/")  # No files field in form, go back safely
 
         uploaded_files = request.files.getlist('files')
 
         if not uploaded_files or all(file.filename == '' for file in uploaded_files):
-            print("🚨 No files selected for upload!")
+            print("No files selected for upload!")
             return redirect("/")  # No files selected, reload dashboard
 
         for uploaded_file in uploaded_files:
             if uploaded_file and uploaded_file.filename.endswith(".py"):
                 file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
                 uploaded_file.save(file_path)
-                print(f"✅ Saved uploaded file to {file_path}")
+                print(f"Saved uploaded file to {file_path}")
 
         # Analyze uploaded files
         print("Running ProjectAnalyzer on uploaded files...")
@@ -231,17 +230,17 @@ def dashboard():
                 UPLOAD_FOLDER,
                 "mydashboard/all_metrics_combined.csv"
             )
-            print("✅ ProjectAnalyzer completed successfully.")
+            print("ProjectAnalyzer completed successfully.")
         except Exception as e:
-            print(f"🚨 Error running ProjectAnalyzer: {e}")
+            print(f"Error running ProjectAnalyzer: {e}")
             return redirect(url_for('dashboard'))
 
          # Reload the DataFrame
         try:
             df = pd.read_csv("mydashboard/all_metrics_combined.csv")
-            print("✅ Successfully reloaded all_metrics_combined.csv")
+            print("Successfully reloaded all_metrics_combined.csv")
         except Exception as e:
-            print(f"🚨 Error loading CSV: {e}")         
+            print(f"Error loading CSV: {e}")         
    
 
         return redirect(url_for('dashboard'))
@@ -250,20 +249,33 @@ def dashboard():
     selected_file = request.args.get("file")
 
     if not selected_file or selected_file not in df['identifier'].values:
-        file_rows = df[df['level'] == 'file']
-        if not file_rows.empty:
-            selected_file = file_rows['identifier'].iloc[0]
+        fallback_rows = df[df['level'].isin(['file', 'project'])]
+        if not fallback_rows.empty:
+            selected_file = fallback_rows['identifier'].iloc[0]
         else:
             selected_file = None  # No files yet
-
+    
     # Generate Dashboard Visuals
     gauges, radar, scatter, _ = generate_visuals(selected_file, df)
 
-    # Extract the 'identifier' column for all file-level rows
-    file_rows = df[df['level'] == 'file'].copy()
-    file_rows['filename'] = file_rows['identifier'].apply(lambda path: os.path.basename(path))
-    file_options = list(zip(file_rows['identifier'], file_rows['filename']))
-    
+    # Show both files and project-level entry in dropdown/tabs
+    display_rows = df[df['level'].isin(['file', 'project'])].copy()
+    display_rows['filename'] = display_rows['identifier'].apply(
+        lambda path: os.path.basename(path) if path != "Project Results" else "Summary"
+    )
+    # Sort so "Project Results" appears first
+    display_rows['sort_order'] = display_rows['identifier'].apply(
+    lambda x: 0 if x == "Project Results" else 1
+    )
+    display_rows = display_rows.sort_values(by='sort_order')
+
+    file_options = list(zip(display_rows['identifier'], display_rows['filename']))
+    selected_filename = None
+    for identifier, fname in file_options:
+        if identifier == selected_file:
+            selected_filename = fname
+            break
+
     return render_template(
         "dashboard.html",
         gauges=gauges,
@@ -271,6 +283,7 @@ def dashboard():
         scatter=scatter,
         file_options=file_options,
         selected_file=selected_file,
+        selected_filename=selected_filename,
         warnings=warnings_list  # Always pass warnings (empty list if no upload)
     )
 
@@ -297,6 +310,6 @@ def download_metrics():
         as_attachment=True,
         download_name=f"{os.path.basename(selected_file)}_metrics.csv"
     )
-print("✅ Reached app.run()")
+print("Reached app.run()")
 if __name__ == "__main__":
     app.run(debug=True, port=5007, use_reloader=False)

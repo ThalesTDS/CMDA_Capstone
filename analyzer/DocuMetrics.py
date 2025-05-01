@@ -62,15 +62,15 @@ class ProjectAnalyzer:
         :param output_file: Path to the output CSV file.
         :return: None.
         """
-        print("✅ Step 1: Calling FileLoader.load_dataset()")
+        print("Step 1: Calling FileLoader.load_dataset()")
         file_results = FileLoader.load_dataset(directory)
-        print("✅ Step 2: Finished load_dataset")
+        print("Step 2: Finished load_dataset")
 
-        print("✅ Step 3: Calling display_project_results()")
+        print("Step 3: Calling display_project_results()")
         ProjectAnalyzer.display_project_results(file_results)
-        print("✅ Step 4: Finished display_project_results")
+        print("Step 4: Finished display_project_results")
 
-        print("✅ Step 5: Calling export_to_csv()")
+        print("Step 5: Calling export_to_csv()")
         ProjectAnalyzer.export_to_csv(file_results, output_file)
-        print("✅ Step 6: Finished export_to_csv")
+        print("Step 6: Finished export_to_csv")
 

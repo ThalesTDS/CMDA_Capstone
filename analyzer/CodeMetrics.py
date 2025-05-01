@@ -22,7 +22,7 @@ _unixcoder = None
 def get_unixcoder_model():
     global _unixcoder
     if _unixcoder is None:
-        print("🚀 Loading UniXcoder model...")
+        print("Loading UniXcoder model...")
         _unixcoder = unixcoder.UniXcoder("microsoft/unixcoder-base").to(_device)
     return _unixcoder
 
