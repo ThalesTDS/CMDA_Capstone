@@ -1,0 +1,18 @@
+comment_density,completeness,conciseness,accuracy,line_count,identifier,overall_score,doc_type,level,num_files
+0.5016722408026756,0.4,1.0,0.47051650285720825,43,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/fast_fibonacci_chatgpt_llm.py,0.5575533225265235,LLM,file,
+0.5999032414126754,0.4,0.0,0.24934421479701996,162,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/jacobi_iteration_method.py,0.3649053939035046,Human,file,
+0.8144796380090498,0.7,1.0,0.3832401633262634,52,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/matrix_inversion_chatgpt_llm.py,0.7626679077353413,LLM,file,
+0.8205128205128205,0.2,1.0,0.13169696927070618,29,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/fast_fibonacci.py,0.5393235430809168,Human,file,
+0.9498327759197324,0.6,0.9473684210526316,0.2579928934574127,117,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/gradient_descent.py,0.7402228063321873,Human,file,
+0.6647673314339981,0.7,0.9748743718592965,0.5975915789604187,165,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/gradient_descent_llm.py,0.7341642316981006,LLM,file,
+0.8695652173913044,0.7,1.0,0.5384231805801392,46,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/jacobi_iteration_method_chatgpt_llm.py,0.7947118832754052,LLM,file,
+0.9419152276295133,0.7,1.0,0.3846096694469452,50,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/gaussian_elimination_chatgpt_llm.py,0.8010355352335483,LLM,file,
+0.7439271255060728,0.24,0.971830985915493,0.279951274394989,308,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/binary_search_tree.py,0.5415394622744194,Human,file,
+1.0,0.1429,0.7272727272727273,0.10335822403430939,325,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/convolution_neural_network.py,0.5129503678579763,Human,file,
+0.7977207977207978,0.4,0.0,0.05867898836731911,27,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/matrix_inversion.py,0.4051841381529713,Human,file,
+0.6440071556350625,0.7,1.0,0.36273258924484253,87,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/convolution_neural_network_llm.py,0.709475405615003,LLM,file,
+1.0,0.2545,0.9607843137254902,0.21210390329360962,97,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/binary_search_tree_chatgpt_llm.py,0.6151672530744591,LLM,file,
+0.6717226435536294,0.4,1.0,0.5941959023475647,76,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/gaussian_elimination.py,0.6209363833008454,Human,file,
+0.40916530278232405,0.4,0.0,0.46532419323921204,95,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/lu_decomposition.py,0.32928201015861847,Human,file,
+0.9846153846153846,0.7,1.0,0.48792773485183716,49,/Users/amyferrufino/Downloads/Capstone/new_branch/CMDA_Capstone/dashboard/uploads/lu_decomposition_chatgpt_llm.py,0.8241773888697991,LLM,file,
+0.7868525853822556,0.4030954861111111,0.7711690017806264,0.31479462367025446,1728,Project Results,0.583007232782272,Mixed,project,16.0
