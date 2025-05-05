@@ -5,27 +5,18 @@
 # noinspection all
 def _embed_batch(texts: list[str]) -> torch.Tensor:
     """
-    Generate L2-normalized embeddings for a batch of texts using the UniXcoder model.
-
-    This function tokenizes the input texts, pads them to the same length, and processes
-    them through the UniXcoder model. It also applies an attention mask to ensure that
-    padding tokens are ignored during processing. The resulting embeddings are normalized
-    using L2 normalization.
-
-    :param texts: A list of input strings to embed.
-    :return: A PyTorch tensor containing the L2-normalized embeddings for the input texts.
+    Generate L2-normalized embeddings for a batch of texts using UniXcoder.
     """
     token_lists = _unixcoder.tokenize(texts, max_length=512, mode="<encoder-only>")
     max_len = max(len(t) for t in token_lists)
     pad_id = getattr(_unixcoder, "pad_id", 1)
 
     padded = [t + [pad_id] * (max_len - len(t)) for t in token_lists]
-    mask = [[1] * len(t) + [0] * (max_len - len(t)) for t in token_lists]  # 1 = real, 0 = pad
-
     src = torch.tensor(padded, device=_device)
-    attn_mask = torch.tensor(mask, device=_device)
 
-    _, emb = _unixcoder(src, attention_mask=attn_mask)  # UniXcoder respects mask
+    with torch.no_grad():
+        _, emb = _unixcoder(src)  # no attention_mask — it's handled internally
+
     return torch.nn.functional.normalize(emb, p=2, dim=1)
 
 # CodeMetrics.py

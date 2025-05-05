@@ -243,35 +243,38 @@ class CodeMetrics:
         filtered_descriptions = [desc for desc in parsed_docstring_descriptions if desc.strip()]
         if not filtered_descriptions:
             return 0.0
-        count_sentences = 0
+        sentences = []
         # Count verbose comments
         verbose_count = 0
         for desc in filtered_descriptions:
-            sentences = sent_tokenize(desc)
-            for s in sentences:
-                count_sentences += 1
-                if len(s.split()) > verbose_threshold:
+            for sent in sent_tokenize(desc):
+                sentences.append(sent)
+                if len(sent.split()) > verbose_threshold:
                     verbose_count += 1
 
-        embeddings = _miniLM.encode(filtered_descriptions)
-        similarities = _miniLM.similarity(embeddings, embeddings).numpy()
-        # since similarity() returns a tensor object, we want a 2D array for simplicity
+        num_sentences = len(sentences)
+        assert num_sentences > 0, "Docstring sentences not found in code -- CodeMetrics.compute_conciseness"
 
-        row = 0
-        similar_count = 0
-        for col in range(1, len(filtered_descriptions)):
-            count_sentences += 1
-            if similarities[row, col] >= similarity_threshold:
-                similar_count += 1
-            else:
-                row = col  # move to the next anchor sentence's row index
+        if num_sentences <= 1:
+            # Only verbosity matters, full weight
+            penalty = verbose_count
+            max_penalty = num_sentences
+        else:
+            embeddings = _miniLM.encode(sentences)
+            similarities = _miniLM.similarity(embeddings, embeddings).numpy()
 
-        # Score computation
-        penalty = 0.75 * verbose_count + 0.25 * similar_count
-        max_penalty = max(1e-6, count_sentences - 0.25)
-        #            = 0.75 * count_sentences + 0.25 * (count_sentences - 1)
+            similar_count = 0
+            anchor = 0
+            for i in range(1, num_sentences):
+                if similarities[anchor, i] >= similarity_threshold:
+                    similar_count += 1
+                else:
+                    anchor = i
 
-        return max(0, 1 - (penalty / max_penalty))
+            penalty = 0.75 * verbose_count + 0.25 * similar_count
+            max_penalty = num_sentences - 0.25
+
+        return max(0.0, 1.0 - (penalty / max_penalty))
 
     @staticmethod
     def get_description_and_code(code: str) -> List[Tuple[str, str]]:
