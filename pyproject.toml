@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "DocuMetrics"
+version = "1.1.0"
+description = "Tool to evaluate Python code documentation and display results via a React dashboard"
+# authors = [{ name = "Name", email = "email" }]
+readme = "README.md"
+license = { text = "MIT" }
+keywords = ["documentation", "python", "docstring", "quality", "code analysis"]
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "sentence-transformers",
+    "flask",
+    "plotly",
+    "numpy",
+    "docstring-parser",
+    "pandas",
+    "nltk",
+    "transformers",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
