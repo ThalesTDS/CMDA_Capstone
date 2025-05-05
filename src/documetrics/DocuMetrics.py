@@ -4,9 +4,8 @@ from typing import List, Dict, Any
 import pandas as pd
 
 from documetrics.FileLoader import FileLoader
-from documetrics.MetricsDisplay import MetricsDisplay
 from documetrics.ScoreAggregator import ScoreAggregator
-from documetrics.globals import debug
+from documetrics.globals import debug, METRICS_LIST
 
 
 # =============================================================================
@@ -15,22 +14,34 @@ from documetrics.globals import debug
 
 class ProjectAnalyzer:
     @staticmethod
-    def display_project_results(file_results: List[Dict[str, Any]], project_results: Dict[str, Any],
-                                plot: bool = False) -> None:
+    def print_results(file_results: List[Dict[str, Any]], project_results: Dict[str, Any]) -> None:
         """
-        Displays and prints metrics for each file and aggregated project metrics.
+        Prints metrics for each file and aggregated project metrics.
+        For debugging only.
 
         :param file_results: List of dictionaries with file metrics.
         :param project_results: Aggregated project metrics.
-        :param plot: If True, display the metrics in a grid format.
         :return: None.
         """
-        if plot or debug:
-            for res in file_results:
-                if plot: MetricsDisplay.display_metric_grid(res)
-                if debug: MetricsDisplay.print_file_results(res)
-        if plot: MetricsDisplay.display_metric_grid(project_results)
-        MetricsDisplay.print_file_results(project_results)
+
+        def print_file_results(results: Dict[str, Any]) -> None:
+            """
+            Print the results of the analysis for each file.
+
+            :param results: Dictionary containing file metrics.
+            :return: None.
+            """
+            print("Filename:", results["identifier"])
+            for metric in METRICS_LIST:
+                print(f"{metric}: {results[metric]:.3f}")
+            if results["identifier"] == "Project Results":
+                print(f"Total lines: {results['line_count']}")
+                print(f"Number of files: {results['num_files']}")
+            print()
+
+        for res in file_results:
+            print_file_results(res)
+        print_file_results(project_results)
 
     @staticmethod
     def export_to_csv(file_results: List[Dict[str, Any]], project_results: Dict[str, Any], output_file: str) -> None:
@@ -62,7 +73,7 @@ class ProjectAnalyzer:
         """
         file_results = FileLoader.load_dataset(directory)
         project_metrics = ScoreAggregator.aggregate_project_score(file_results)
-        ProjectAnalyzer.display_project_results(file_results, project_metrics)
+        if debug: ProjectAnalyzer.print_results(file_results, project_metrics)
         ProjectAnalyzer.export_to_csv(file_results, project_metrics, output_file)
 
     @staticmethod
@@ -70,14 +81,12 @@ class ProjectAnalyzer:
         """
         Perform cleanup operations to release resources and terminate the program.
 
-        - Closes all open matplotlib figures.
         - Clears the GPU memory cache using PyTorch.
         - Synchronizes GPU kernels to ensure all operations are complete.
         - Triggers garbage collection to finalize and free memory.
         - Exits the program to terminate any stray non-daemon threads.
         """
-        import matplotlib.pyplot as plt, sys, gc
-        plt.close('all')  # shut down any open figures
+        import sys, gc
         try:
             import torch
             torch.cuda.empty_cache()  # flush GPU allocator
