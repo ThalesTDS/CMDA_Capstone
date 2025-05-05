@@ -1,4 +1,5 @@
 import ast
+import math
 import re
 import warnings
 from functools import lru_cache
@@ -373,4 +374,35 @@ class CodeMetrics:
         flat = [txt for p in pairs for txt in p]  # [code0, doc0, …]
         embeds = torch.cat([_embed(t) for t in flat])
         sims = torch.einsum("ac,ac->a", embeds[0::2], embeds[1::2])
-        return sims.mean().item()
+        return  CodeMetrics.normalize_and_scale_accuracy(sims.mean().item())
+
+    @staticmethod
+    def normalize_and_scale_accuracy(val: float, min_sim: float = 0.1, max_sim: float = 0.6) -> float:
+        """
+        Normalize and scale the raw cosine similarity (accuracy) score to [0, 1].
+
+        This function assumes that cosine similarities typically range from ~0.1 (worst realistic case)
+        to ~0.6 (best observed case). It linearly normalizes the value within that range and then applies
+        a soft sigmoid to emphasize mid-range differences while compressing extremes.
+
+        :param val: Raw cosine similarity score (usually 0.15–0.67).
+        :param min_sim: Minimum observed similarity value.
+        :param max_sim: Maximum observed similarity value.
+        :return: Scaled score in the range [0, 1].
+        """
+        # Explicit floor/ceiling handling
+        if val < min_sim:
+            return 0.0
+        elif val > max_sim:
+            return 1.0
+
+        # Linear normalization to [0, 1]
+        norm = (val - min_sim) / (max_sim - min_sim)
+
+        # avoid sigmoid scaling for extreme values
+        if norm < 0.1 or norm > 0.9:
+            return norm
+
+        # Smooth sigmoid transformation to spread mid-values
+        scaled = 1 / (1 + math.exp(-6 * (norm - 0.5)))
+        return round(scaled * 20) / 20  # scale to nearest 0.05
