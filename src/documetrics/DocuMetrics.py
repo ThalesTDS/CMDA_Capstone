@@ -91,7 +91,7 @@ class ProjectAnalyzer:
             import torch
             torch.cuda.empty_cache()  # flush GPU allocator
             torch.cuda.synchronize()  # wait for kernels to finish
-        except ImportError:
+        except Exception:
             pass
         gc.collect()  # encourage finalizers
         sys.exit(0)  # kill stray non-daemon threads
