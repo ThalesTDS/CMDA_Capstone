@@ -47,29 +47,20 @@ class CodeAnalyzer:
         return metrics
 
     @staticmethod
-    def analyze_file(file_path: str) -> Dict[str, Any] | None:
+    def analyze_file(file_path: str, throw: bool) -> Dict[str, Any] | None:
         """
         Load a Python file and analyze its code to compute metrics.
 
         :param file_path: Path to the Python file.
+        :param throw: Throws an error if there is an error reading the file.
         :return: Dictionary with computed metrics, or None if reading fails.
         """
         try:
             with open(file_path, "r", encoding="utf-8-sig") as f:
                 code = f.read()
         except Exception as e:
+            if throw:
+                raise RuntimeError(f"Error reading {file_path}: {e}")
             print(f"Error reading {file_path}: {e}")
             return None
-        return CodeAnalyzer.analyze_code(code, identifier=CodeAnalyzer.trim_file_path(file_path))
-
-    @staticmethod
-    def trim_file_path(file_path: str) -> str:
-        """
-        Trim the file path to begin from the 'data/' directory if present.
-
-        :param file_path: Original file path.
-        :return: Trimmed file path.
-        """
-        normalized_path = file_path.replace("\\", "/")
-        match = re.search(r'data/.*', normalized_path)
-        return match.group(0) if match else file_path
+        return CodeAnalyzer.analyze_code(code, identifier=file_path)

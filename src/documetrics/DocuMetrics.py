@@ -73,6 +73,7 @@ class ProjectAnalyzer:
         file_results = FileLoader.load_dataset(directory)
         project_metrics = ScoreAggregator.aggregate_project_score(file_results)
         if debug: ProjectAnalyzer.print_results(file_results, project_metrics)
+        FileLoader.trim_common_path_in_identifiers(file_results)
         ProjectAnalyzer.export_to_csv(file_results, project_metrics)
 
     @staticmethod
@@ -86,6 +87,7 @@ class ProjectAnalyzer:
         - Exits the program to terminate any stray non-daemon threads.
         """
         import sys, gc
+        # noinspection PyBroadException
         try:
             import torch
             torch.cuda.empty_cache()  # flush GPU allocator
@@ -95,18 +97,45 @@ class ProjectAnalyzer:
         gc.collect()  # encourage finalizers
         sys.exit(0)  # kill stray non-daemon threads
 
+    @staticmethod
+    def input_validation(file_path: str) -> Dict[str, int | str]:
+        if not file_path: # Check for None or empty string
+            return {"code": -1, "message": "No file or directory provided."}
+        if not os.path.exists(file_path): # Check if path exists
+            return {"code": -2, "message": f"Invalid file or directory path: {file_path}"}
+        if not os.path.isfile(file_path) and not os.path.isdir(file_path): # Check if it's a file or directory
+            return {"code": -3, "message": f"Path is neither a file nor a directory: {file_path}"}
+        if os.path.isfile(file_path):
+            if not file_path.endswith(".py"): # Check for Python file extension
+                return {"code": -4, "message": f"File is not a Python (.py) file: {file_path}"}
+            if os.path.getsize(file_path) == 0:  # Check for empty file
+                return {"code": -5, "message": f"File is empty: {file_path}"}
+        if os.path.isdir(file_path):
+            py_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(file_path) for f in filenames if f.endswith(".py")]
+            if not py_files:  # Check if directory contains Python files
+                return {"code": -6, "message": f"Directory does not contain any Python (.py) files: {file_path}"}
+        if not os.access(file_path, os.R_OK):  # Check for read permissions
+            return {"code": -7, "message": f"Permission denied for file or directory: {file_path}"}
+        return {"code": 0, "message": "Validation successful."}
 
-# =============================================================================
-# Main Routine
-# =============================================================================
-def main():
-    """
-    Main routine to analyze a directory of Python files and display the results.
-    """
-    dataset_directory = FileLoader.get_dir_path("working_pwc_code")
-    ProjectAnalyzer.analyze_and_export(dataset_directory)
-    ProjectAnalyzer.cleanup()
 
+    # =============================================================================
+    # Main Routine
+    # =============================================================================
+    @staticmethod
+    def main(file_path: str = None) -> Dict[str, int | str]:
+        """
+        Main routine to analyze a Python file or directory containing Python files.
 
+        :param file_path: Path to a single Python file or directory. If None, error is raised.
+        """
+        validation_result = ProjectAnalyzer.input_validation(file_path)
+        if validation_result["code"] != 0:
+            return validation_result
+        ProjectAnalyzer.analyze_and_export(file_path)
+        ProjectAnalyzer.cleanup()
+        return validation_result
+
+# TODO: Remove:
 if __name__ == "__main__":
-    main()
+    ProjectAnalyzer.main()
