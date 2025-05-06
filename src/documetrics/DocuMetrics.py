@@ -44,15 +44,15 @@ class ProjectAnalyzer:
         print_file_results(project_results)
 
     @staticmethod
-    def export_to_csv(file_results: List[Dict[str, Any]], project_results: Dict[str, Any], output_file: str) -> None:
+    def export_to_csv(file_results: List[Dict[str, Any]], project_results: Dict[str, Any]) -> None:
         """
         Export the analysis results to a CSV file.
 
         :param file_results: List of dictionaries with file metrics.
         :param project_results: Aggregated project metrics.
-        :param output_file: Path to the output CSV file.
         :return: None.
         """
+        output_file = os.path.join(os.path.dirname(__file__), "outputs", "all_metrics_combined.csv")
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         for d in file_results:
@@ -63,18 +63,17 @@ class ProjectAnalyzer:
         df.to_csv(output_file, index=False)
 
     @staticmethod
-    def analyze_and_export(directory: str, output_file: str = "outputs/all_metrics_combined.csv") -> None:
+    def analyze_and_export(directory: str) -> None:
         """
         Analyze all Python files in a directory and display both individual and aggregated metrics.
 
         :param directory: Path to the directory containing Python files.
-        :param output_file: Path to the output CSV file.
         :return: None.
         """
         file_results = FileLoader.load_dataset(directory)
         project_metrics = ScoreAggregator.aggregate_project_score(file_results)
         if debug: ProjectAnalyzer.print_results(file_results, project_metrics)
-        ProjectAnalyzer.export_to_csv(file_results, project_metrics, output_file)
+        ProjectAnalyzer.export_to_csv(file_results, project_metrics)
 
     @staticmethod
     def cleanup() -> None:

@@ -1,4 +1,5 @@
 # DocuMetrics: Code Documentation Quality Analyzer
+`pip install .` Within the project folder to install all dependencies.
 
 ## Overview
 DocuMetrics analyzes Python source code for the presence and quality of inline comments and docstrings. It computes documentation-related metrics and provides a composite score for each file and project.
@@ -71,10 +72,8 @@ DocuMetrics analyzes Python source code for the presence and quality of inline c
 ---
 
 ### **6. Metric Visualization**
-#### `MetricsDisplay`
-- **`display_metric_grid(metrics: Dict[str, Any]) -> None`**
-  - Visualizes scores using a matplotlib grid: red (low) → green (high).
-  - Displays overall score prominently, with annotations for metadata.
+#### `Dashboard`
+
 
 ---
 
@@ -95,5 +94,5 @@ DocuMetrics analyzes Python source code for the presence and quality of inline c
 1. The tool extracts comments and docstrings from Python files.
 2. Various metrics are computed for each file, evaluating documentation quality.
 3. Metrics are normalized and aggregated to provide overall scores.
-4. Results are displayed using a grid visualization.
+4. Results are displayed within the dashboard.
 5. Users can analyze a single file or an entire directory of Python files.
