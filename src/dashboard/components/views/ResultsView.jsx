@@ -53,9 +53,13 @@ const ResultsView = () => {
         <button 
           className="btn-outline text-sm"
           onClick={() => {
-            // Create download link for CSV
-            // This is just a placeholder - would need to be implemented with the real API
-            alert('Download functionality would be implemented here');
+            // Download the metrics CSV from the backend
+            const link = document.createElement('a');
+            link.href = '/api/download?file=all_metrics_combined.csv';
+            link.download = 'all_metrics_combined.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           }}
         >
           Export Metrics

@@ -106,7 +106,7 @@ const SummaryStats = ({ metrics }) => {
         <div className="flex items-center justify-center">
           <div className={`text-6xl font-bold relative ${getColorClass(metrics.overall_score)}`}>
             {formatMetricValue(metrics.overall_score)}
-            <span className={`absolute bottom-1 -right-3 text-xs font-normal ${theme === 'neon' ? 'text-accent' : 'text-primary'}`}>
+            <span className={`absolute bottom-1 -right-4 text-xs font-normal ${theme === 'neon' ? 'text-accent' : 'text-primary'}`}>
               /1.0
             </span>
           </div>
