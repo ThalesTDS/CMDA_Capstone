@@ -1,0 +1,29 @@
+:root {
+  --background: 210 100% 98%;
+  --foreground: 200 75% 23%;
+  --card: 0 0% 100%;
+  --card-foreground: 200 75% 23%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 200 75% 23%;
+  --primary: 200 100% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 195 100% 41%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 195 100% 94%;
+  --muted-foreground: 200 30% 49%;
+  --accent: 200 71% 55%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 200 40% 89%;
+  --input: 200 40% 89%;
+  --ring: 200 100% 36%;
+  --radius: 0.5rem;
+
+  /* Chart Colors */
+  --chart-color-1: #0072B5;
+  --chart-color-2: #00A9CE;
+  --chart-color-3: #38B0DE;
+  --chart-color-4: #5BC0EB;
+  --chart-color-5: #7FDBFF;
+}

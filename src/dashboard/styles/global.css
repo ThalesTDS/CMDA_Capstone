@@ -1,0 +1,137 @@
+@import './themes/aquatic.css';
+@import './themes/neon.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-card p-4 rounded-md shadow-md;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 px-4 py-2 rounded-md transition-colors;
+  }
+
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2 rounded-md transition-colors;
+  }
+
+  .metric-gauge {
+    @apply rounded-full overflow-hidden relative;
+  }
+}
+
+.wrapper {
+  @apply container mx-auto px-4;
+}
+
+/* Utility classes */
+.transition-theme {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Wave animations */
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background-repeat: repeat-x;
+  background-position: 0 bottom;
+  transform-origin: center bottom;
+}
+
+.wave1 {
+  opacity: 0.3;
+  height: 50%;
+  animation: wave 25s linear infinite;
+  border-radius: 2000% 1000% 0 0;
+}
+
+.wave2 {
+  opacity: 0.5;
+  height: 60%;
+  animation: wave-reverse 20s linear infinite;
+  border-radius: 1000% 2000% 0 0;
+}
+
+.wave3 {
+  opacity: 0.2;
+  height: 40%;
+  animation: wave 30s linear infinite;
+  border-radius: 1000% 1000% 0 0;
+}
+
+/* Animated radar polygon */
+.radar-animation {
+  transform-origin: center;
+  animation: rotate-slow 20s linear infinite;
+}
+
+/* Animated gauge effects */
+.gauge-fill {
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+.gauge-value {
+  animation: pulse-slow 3s infinite;
+}
+
+/* Interactive hover effects */
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Animated progress bar */
+.progress-bar-animated {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-animated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+/* Animated background glow for neon theme */
+.neon-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+/* Radar chart animation */
+.radar-point {
+  animation: ping-slow 3s ease-in-out infinite;
+}
+
+/* Seaweed animation */
+@keyframes sway {
+  0% { transform: rotate(-5deg); }
+  100% { transform: rotate(5deg); }
+}

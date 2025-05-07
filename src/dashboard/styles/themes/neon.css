@@ -1,0 +1,28 @@
+.neon-theme {
+  --background: 240 42% 9%;
+  --foreground: 240 100% 94%;
+  --card: 240 42% 16%;
+  --card-foreground: 240 100% 94%;
+  --popover: 240 42% 16%;
+  --popover-foreground: 240 100% 94%;
+  --primary: 275 74% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 300 100% 50%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 240 31% 15%;
+  --muted-foreground: 261 59% 90%;
+  --accent: 180 100% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 277 84% 25%;
+  --input: 277 84% 25%;
+  --ring: 275 74% 53%;
+
+  /* Chart Colors */
+  --chart-color-1: #8A2BE2;
+  --chart-color-2: #FF00FF;
+  --chart-color-3: #00FFFF;
+  --chart-color-4: #9966CC;
+  --chart-color-5: #7B68EE;
+}
