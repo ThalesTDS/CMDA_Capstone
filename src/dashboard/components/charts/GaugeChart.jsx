@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {formatMetricValue} from '../../utils/utils';
 import {useTheme} from '../../contexts/ThemeContext';
 
@@ -7,6 +7,7 @@ const GaugeChart = ({metric, value, size = 180}) => {
     const animationRef = useRef(null);
     const currentValueRef = useRef(0);
     const {theme} = useTheme();
+    const [isHovered, setIsHovered] = useState(false);
 
     // Format the metric name for display
     const formatMetricName = (name) => {
@@ -57,7 +58,7 @@ const GaugeChart = ({metric, value, size = 180}) => {
             currentValueRef.current = startValue + (targetValue - startValue) * easedProgress;
 
             // Draw the gauge
-            drawGauge(currentValueRef.current);
+            drawGauge(currentValueRef.current, isHovered);
 
             // Continue animation if not complete
             if (progress < 1) {
@@ -75,7 +76,7 @@ const GaugeChart = ({metric, value, size = 180}) => {
     };
 
     // Draw the gauge
-    const drawGauge = (currentValue) => {
+    const drawGauge = (currentValue, hover = false) => {
         if (!canvasRef.current) return;
 
         const canvas = canvasRef.current;
@@ -113,10 +114,10 @@ const GaugeChart = ({metric, value, size = 180}) => {
         ctx.lineWidth = theme === 'neon' ? 10 : 15;
         ctx.strokeStyle = gradient;
 
-        // Add glow effect for neon theme
-        if (theme === 'neon') {
+        // Add glow effect for neon theme or highlight on hover
+        if (theme === 'neon' || hover) {
             ctx.shadowColor = valueColor;
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = hover ? 20 : 10;
         }
 
         ctx.stroke();
@@ -167,10 +168,10 @@ const GaugeChart = ({metric, value, size = 180}) => {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Add small glow to text for neon theme
-        if (theme === 'neon') {
+        // Add small glow to text for neon theme or highlight on hover
+        if (theme === 'neon' || hover) {
             ctx.shadowColor = valueColor;
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = hover ? 10 : 5;
         }
 
         ctx.fillText(formatMetricValue(currentValue), centerX, centerY - 10);
@@ -191,6 +192,14 @@ const GaugeChart = ({metric, value, size = 180}) => {
         ctx.textAlign = 'right';
         ctx.fillText('1', centerX + radius * 0.9, centerY + radius * 0.4);
     };
+
+    // Redraw gauge on hover state change
+    useEffect(() => {
+        if (canvasRef.current) {
+            drawGauge(currentValueRef.current, isHovered);
+        }
+        // eslint-disable-next-line
+    }, [isHovered]);
 
     // Initialize and animate gauge when mounted or value changes
     useEffect(() => {
@@ -222,7 +231,7 @@ const GaugeChart = ({metric, value, size = 180}) => {
             className="relative"
             style={{
                 width: `${size}px`,
-                height: `${size / 1.5 + 16}px`, // add space for bar
+                height: `${size / 1.5 + 16}px`,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -239,10 +248,15 @@ const GaugeChart = ({metric, value, size = 180}) => {
                     justifyContent: 'center',
                     position: 'absolute',
                     top: 0,
-                    left: '-25px', // <-- Offset to the left for better centering
+                    left: '-25px',
                     right: 0,
-                    pointerEvents: 'none', // prevent accidental offset
+                    pointerEvents: 'auto',
+                    transition: 'transform 0.2s cubic-bezier(.4,2,.6,1)', // smooth rise
+                    transform: isHovered ? 'translateY(-12px)' : 'none', // rise up on hover
+                    zIndex: 1,
                 }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
             >
                 <canvas
                     ref={canvasRef}
@@ -251,6 +265,7 @@ const GaugeChart = ({metric, value, size = 180}) => {
                         margin: '0 auto',
                         width: `${size}px`,
                         height: `${size / 1.5}px`,
+                        cursor: 'pointer',
                     }}
                     width={size}
                     height={size / 1.5}
