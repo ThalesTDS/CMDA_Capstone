@@ -1,8 +1,8 @@
-import json
 import os
-import subprocess
 import sys
 import threading
+import tkinter as tk
+from tkinter import filedialog
 
 from flask import Flask, request, jsonify, send_file, redirect
 
@@ -34,32 +34,27 @@ analysis_status = {
 }
 
 
-# Native file dialog function (run in subprocess for thread safety)
-def select_file_or_directory_subprocess():
+# Remove subprocess logic, use direct Tkinter dialog for folder selection
+def select_folder_dialog():
     """
-    Launch a subprocess to open the tkinter dialog in a main thread.
-    Returns the selected path or None.
+    Open a native folder dialog and return the selected path or None.
     """
-    helper_script = os.path.join(os.path.dirname(__file__), "file_dialog_helper.py")
-    result = subprocess.run(
-        [sys.executable, helper_script],
-        capture_output=True,
-        text=True
-    )
-    if result.returncode == 0:
-        try:
-            data = json.loads(result.stdout.strip())
-            return data.get("path")
-        except Exception:
-            return None
-    return None
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        path = filedialog.askdirectory(title="Select Folder")
+        return path if path else None
+    except Exception:
+        return None
+    finally:
+        root.destroy()
 
 
 @app.route('/api/metrics')
 def get_metrics():
     """Return metrics data from CSV file."""
     if not os.path.exists(OUTPUT_CSV) or os.path.getsize(OUTPUT_CSV) == 0:
-        return jsonify({"error": "No metrics data available. Please analyze a file or directory first."}), 404
+        return jsonify({"error": "No metrics data available. Please analyze a folder first."}), 404
 
     return send_file(OUTPUT_CSV, mimetype='text/csv')
 
@@ -106,7 +101,7 @@ def run_analysis_task(file_path):
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_path():
-    """Handle file/directory path analysis."""
+    """Handle folder path analysis."""
     global analysis_status
 
     # Reset status
@@ -122,7 +117,7 @@ def analyze_path():
     file_path = data.get('path')
 
     if not file_path:
-        return jsonify({"code": -1, "message": "No file or directory path provided."}), 400
+        return jsonify({"code": -1, "message": "No folder path provided."}), 400
 
     # Check if analysis is already in progress
     if analysis_status['in_progress']:
@@ -137,11 +132,11 @@ def analyze_path():
 
 @app.route('/api/file-dialog', methods=['GET'])
 def file_dialog():
-    """Open a native file dialog and return the selected path."""
-    path = select_file_or_directory_subprocess()
+    """Open a native folder dialog and return the selected path."""
+    path = select_folder_dialog()
     if path:
         return jsonify({"path": path})
-    return jsonify({"error": "No file selected"}), 400
+    return jsonify({"error": "No folder selected"}), 400
 
 
 @app.route('/api/status')

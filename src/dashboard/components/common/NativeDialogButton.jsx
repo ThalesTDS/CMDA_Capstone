@@ -12,17 +12,17 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
     setError('');
     
     try {
-      // Call the backend API to open the native file dialog
+      // Call the backend API to open the native folder dialog
       const response = await fetch('/api/file-dialog');
       
       if (!response.ok) {
-        throw new Error('Failed to open file dialog');
+        throw new Error('Failed to open folder dialog');
       }
       
       const data = await response.json();
       
       if (data.error) {
-        setError(data.error);
+        setError(data.error.replace(/file/i, 'folder'));
         return;
       }
       
@@ -32,8 +32,8 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
         onSelectPath?.(unixPath);
       }
     } catch (err) {
-      console.error('Error opening file dialog:', err);
-      setError('Failed to open file dialog');
+      console.error('Error opening folder dialog:', err);
+      setError('Failed to open folder dialog');
     }
   };
   
@@ -89,7 +89,7 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
                   strokeLinejoin="round"
                 />
               </svg>
-              Select File or Folder
+              Select Folder
             </>
           )}
         </span>
@@ -97,7 +97,7 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
       
       {selectedPath && (
         <div className="mt-2 text-sm text-muted-foreground">
-          Selected: <span className="font-medium">{selectedPath}</span>
+          Selected folder: <span className="font-medium">{selectedPath}</span>
         </div>
       )}
       
