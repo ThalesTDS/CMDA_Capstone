@@ -87,7 +87,7 @@ const RadarChart = ({ data, title = 'Metrics Radar Chart' }) => {
       circle.setAttribute('r', circleRadius);
       circle.setAttribute('fill', 'none');
       circle.setAttribute('stroke', mutedColor);
-      circle.setAttribute('stroke-opacity', theme === 'aquatic' ? 0.4 : 0.5); // Increased contrast
+      circle.setAttribute('stroke-opacity', theme === 'aquatic' ? 0.6 : 0.5); // Increased contrast
       circle.setAttribute('stroke-width', theme === 'neon' ? '1.5' : '1'); // Thicker lines
       circle.setAttribute('stroke-dasharray', theme === 'neon' ? '3,3' : '1,1');
       chart.appendChild(circle);
@@ -162,8 +162,7 @@ const RadarChart = ({ data, title = 'Metrics Radar Chart' }) => {
       const y = distance * Math.sin(angle);
       return { x, y, value };
     });
-    
-    // Draw data polygon - fixed to prevent animation rotating the polygon away from points
+
     const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     polygon.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '));
     polygon.setAttribute('fill', primaryColor);
