@@ -1,10 +1,8 @@
+import json
 import os
+import subprocess
 import sys
 import threading
-import tkinter as tk
-from tkinter import filedialog, messagebox
-import subprocess
-import json
 
 from flask import Flask, request, jsonify, send_file, redirect
 
@@ -16,8 +14,8 @@ if parent_dir not in sys.path:
 
 from documetrics.DocuMetrics import ProjectAnalyzer
 
-app = Flask(__name__, 
-            static_url_path='', 
+app = Flask(__name__,
+            static_url_path='',
             static_folder='static')
 
 # Define path to output CSV
@@ -34,6 +32,7 @@ analysis_status = {
     'result': None,
     'error': None
 }
+
 
 # Native file dialog function (run in subprocess for thread safety)
 def select_file_or_directory_subprocess():
@@ -55,49 +54,61 @@ def select_file_or_directory_subprocess():
             return None
     return None
 
+
 @app.route('/api/metrics')
 def get_metrics():
     """Return metrics data from CSV file."""
     if not os.path.exists(OUTPUT_CSV) or os.path.getsize(OUTPUT_CSV) == 0:
         return jsonify({"error": "No metrics data available. Please analyze a file or directory first."}), 404
-    
+
     return send_file(OUTPUT_CSV, mimetype='text/csv')
+
 
 def run_analysis_task(file_path):
     """Run analysis in a separate thread with progress updates."""
     global analysis_status
-    
+
     try:
+        print("[Analysis] Starting analysis thread")
         analysis_status['in_progress'] = True
         analysis_status['progress'] = 10
-        analysis_status['status_message'] = 'Validating path...'        
-        
+        analysis_status['status_message'] = 'Validating path...'
+        analysis_status['error'] = None  # Clear previous error
+
         # Path validation
         analysis_status['progress'] = 20
-        analysis_status['status_message'] = 'Beginning analysis...'        
-        
+        analysis_status['status_message'] = 'Beginning analysis...'
+        print("[Analysis] Path validated")
+
         # Run analysis
         analysis_status['progress'] = 40
-        analysis_status['status_message'] = 'Processing files...'        
+        analysis_status['status_message'] = 'Processing files...'
+        print("[Analysis] Calling ProjectAnalyzer.main")
         result = ProjectAnalyzer.main(file_path)
-        
+        print("[Analysis] ProjectAnalyzer.main returned")
+
         analysis_status['progress'] = 90
-        analysis_status['status_message'] = 'Finalizing results...'      
+        analysis_status['status_message'] = 'Finalizing results...'
         analysis_status['result'] = result
-        
+
         analysis_status['progress'] = 100
-        analysis_status['status_message'] = 'Analysis complete'        
+        analysis_status['status_message'] = 'Analysis complete'
         analysis_status['in_progress'] = False
+        print("[Analysis] Analysis complete")
     except Exception as e:
+        print("[Analysis] Exception occurred:", e)
         analysis_status['error'] = str(e)
+        analysis_status['result'] = None
+        analysis_status['progress'] = 100  # Ensure progress is set to 100 on error
         analysis_status['in_progress'] = False
-        analysis_status['status_message'] = f'Error: {str(e)}'        
+        analysis_status['status_message'] = f'Error: {str(e)}'
+
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_path():
     """Handle file/directory path analysis."""
     global analysis_status
-    
+
     # Reset status
     analysis_status = {
         'in_progress': False,
@@ -106,23 +117,23 @@ def analyze_path():
         'result': None,
         'error': None
     }
-    
+
     data = request.json
     file_path = data.get('path')
-    
+
     if not file_path:
         return jsonify({"code": -1, "message": "No file or directory path provided."}), 400
-    
+
     # Check if analysis is already in progress
     if analysis_status['in_progress']:
         return jsonify({"code": -2, "message": "Analysis already in progress."}), 409
-    
+
     # Start analysis in a separate thread
     analysis_thread = threading.Thread(target=run_analysis_task, args=(file_path,))
-    analysis_thread.daemon = True
     analysis_thread.start()
-    
+
     return jsonify({"code": 0, "message": "Analysis started."})
+
 
 @app.route('/api/file-dialog', methods=['GET'])
 def file_dialog():
@@ -132,33 +143,37 @@ def file_dialog():
         return jsonify({"path": path})
     return jsonify({"error": "No file selected"}), 400
 
+
 @app.route('/api/status')
 def get_analysis_status():
     """Get the current status of analysis."""
     return jsonify(analysis_status)
 
+
 @app.route('/api/download')
 def download_metrics():
     """Download metrics for a specific file."""
     file_id = request.args.get('file')
-    
+
     if not file_id:
         return jsonify({"error": "No file specified."}), 400
-    
+
     if not os.path.exists(OUTPUT_CSV) or os.path.getsize(OUTPUT_CSV) == 0:
         return jsonify({"error": "Metrics file not found or empty."}), 404
-    
+
     # In a full implementation, we would filter the CSV for just this file
     # For now, return the full CSV
-    return send_file(OUTPUT_CSV, 
+    return send_file(OUTPUT_CSV,
                      as_attachment=True,
                      download_name=f"{os.path.basename(file_id)}_metrics.csv",
                      mimetype='text/csv')
+
 
 @app.route('/')
 def index():
     """Serve the React app welcome page."""
     return app.send_static_file('index.html')
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -169,6 +184,7 @@ def dashboard():
         return redirect('/')
     return app.send_static_file('index.html')
 
+
 # Catch-all route to handle React Router
 @app.route('/<path:path>')
 def catch_all(path):
@@ -178,5 +194,7 @@ def catch_all(path):
     except:
         return app.send_static_file('index.html')
 
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Force threaded mode for Flask dev server
+    app.run(port=5000, threaded=True, debug=True, use_reloader=True)

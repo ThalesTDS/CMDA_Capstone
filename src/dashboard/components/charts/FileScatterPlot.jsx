@@ -44,33 +44,34 @@ const FileScatterPlot = ({ files, maxFiles = 8 }) => {
     const maxLineCount = Math.max(...limitedFiles.map(file => file.line_count));
     
     // Create datasets separated by doc_type
-    const datasets = [];
-    
-    // Group files by doc type
-    const filesByType = {};
-    limitedFiles.forEach(file => {
-      const type = file.doc_type?.toLowerCase() || 'unknown';
-      if (!filesByType[type]) {
-        filesByType[type] = [];
-      }
-      filesByType[type].push(file);
-    });
-    
-    // Create a dataset for each doc type
-    Object.entries(filesByType).forEach(([type, files]) => {
-      const isHuman = type.toLowerCase() === 'human';
-      datasets.push({
-        label: type.charAt(0).toUpperCase() + type.slice(1),
-        data: files.map(file => ({
-          x: labels.indexOf(formatFileName(file.identifier)),
-          y: file[selectedMetric] || 0,
-          r: Math.max(5, (file.line_count / maxLineCount) * 20) // Scale bubble size
-        })),
-        backgroundColor: isHuman ? colors.human : colors.llm,
-        borderColor: isHuman ? colors.humanBorder : colors.llmBorder,
+    const datasets = [
+      {
+        label: 'Human',
+        data: limitedFiles
+          .filter(file => (file.doc_type?.toLowerCase() || 'unknown') === 'human')
+          .map(file => ({
+            x: formatFileName(file.identifier),
+            y: file[selectedMetric] || 0,
+            r: Math.max(5, (file.line_count / maxLineCount) * 20)
+          })),
+        backgroundColor: colors.human,
+        borderColor: colors.humanBorder,
         borderWidth: 1,
-      });
-    });
+      },
+      {
+        label: 'Llm',
+        data: limitedFiles
+          .filter(file => (file.doc_type?.toLowerCase() || 'unknown') === 'llm')
+          .map(file => ({
+            x: formatFileName(file.identifier),
+            y: file[selectedMetric] || 0,
+            r: Math.max(5, (file.line_count / maxLineCount) * 20)
+          })),
+        backgroundColor: colors.llm,
+        borderColor: colors.llmBorder,
+        borderWidth: 1,
+      }
+    ];
     
     // Create chart
     chartInstance.current = new Chart(ctx, {
@@ -124,8 +125,10 @@ const FileScatterPlot = ({ files, maxFiles = 8 }) => {
           tooltip: {
             callbacks: {
               label: (context) => {
-                const file = limitedFiles[context.parsed.x];
-                const metricValue = file[selectedMetric].toFixed(2);
+                // Find the file by matching the label (x value)
+                const file = limitedFiles.find(f => formatFileName(f.identifier) === context.raw.x);
+                if (!file) return '';
+                const metricValue = file[selectedMetric]?.toFixed(2) ?? 'N/A';
                 const lineCount = file.line_count;
                 return [
                   `${formatFileName(file.identifier)} (${file.doc_type})`,

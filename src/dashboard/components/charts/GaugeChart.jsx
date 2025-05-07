@@ -218,14 +218,61 @@ const GaugeChart = ({ metric, value, size = 180 }) => {
   }, [value, size, theme]);
   
   return (
-    <div className={`relative flex flex-col items-center hover-scale ${theme === 'neon' ? 'neon-glow' : ''}`}>
-      <canvas 
-        ref={canvasRef} 
-        className={`mb-2 ${theme === 'neon' ? 'gauge-neon' : ''}`}
-      ></canvas>
-      <div className={`absolute bottom-0 w-full h-1 ${theme === 'neon' ? 'bg-background' : 'bg-muted'} rounded-full overflow-hidden`}>
-        <div 
-          className={`h-full ${theme === 'neon' ? 'bg-accent' : 'bg-primary'} rounded-full transition-all duration-1000 progress-bar-animated`} 
+    <div
+      className="relative"
+      style={{
+        width: `${size}px`,
+        height: `${size / 1.5 + 16}px`, // add space for bar
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+      }}
+    >
+      {/* Gauge Canvas */}
+      <div
+        style={{
+          width: `${size}px`,
+          height: `${size / 1.5}px`,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          position: 'absolute',
+          top: 0,
+          left: '-25px', // <-- Offset to the left for better centering
+          right: 0,
+          pointerEvents: 'none', // prevent accidental offset
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          style={{
+            display: 'block',
+            margin: '0 auto',
+            width: `${size}px`,
+            height: `${size / 1.5}px`,
+          }}
+          width={size}
+          height={size / 1.5}
+          className={theme === 'neon' ? 'gauge-neon' : ''}
+        />
+      </div>
+      {/* Bar */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          width: `${size}px`,
+          height: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          zIndex: 2,
+        }}
+        className={`w-full rounded-full overflow-hidden ${theme === 'neon' ? 'bg-background' : 'bg-muted'}`}
+      >
+        <div
+          className={`h-full ${theme === 'neon' ? 'bg-accent' : 'bg-primary'} rounded-full transition-all duration-1000 progress-bar-animated`}
           style={{ width: `${value * 100}%` }}
         ></div>
       </div>

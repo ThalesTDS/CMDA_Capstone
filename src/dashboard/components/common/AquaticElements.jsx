@@ -3,34 +3,57 @@ import React from 'react';
 // Fish swimming animations for aquatic theme
 export const SwimmingFish = ({ count = 5 }) => {
   // Create multiple fish with different delays and positions
-  const fish = Array.from({ length: count }, (_, index) => {
-    const delay = index * 3; // Spread out fish animations
-    const size = 24 + (index % 3) * 8; // Vary sizes
-    const posY = 30 + (index * 12); // Different vertical positions
-    
+  const fish = Array.from({ length: count * 2 }, (_, index) => {
+    const isLeft = index >= count; // Determine if fish is on the left side
+    const delay = (index % count) * 3; // Spread out fish animations
+    const size = 24 + ((index % count) % 3) * 8; // Vary sizes
+    const posY = 30 + ((index % count) * 12); // Different vertical positions
+
+    // Increase travel distance: start far off-screen and end far off-screen
+    // Animate from -30% to 130% (or reverse for left-facing)
+    const startX = isLeft ? '-30%' : '-30%';
+    const endX = isLeft ? '130%' : '130%';
+
+    // Vary animation duration more significantly
+    const duration = 12 + Math.random() * 28; // 12s to 40s
+
     return (
-      <div 
+      <div
         key={index}
-        className="absolute animate-fish-swim"
-        style={{ 
-          top: `${posY}%`, 
+        className={`absolute z-10`}
+        style={{
+          top: `${posY}%`,
+          left: 0,
+          width: `${size}px`,
+          height: `${size * 0.6}px`,
+          pointerEvents: 'none',
+          // Custom swim animation per fish
+          animation: `fish-swim-${index} ${duration}s linear infinite`,
           animationDelay: `${delay}s`,
-          animationDuration: `${30 + Math.random() * 20}s`
+          transform: isLeft ? 'scaleX(-1)' : 'none',
         }}
       >
-        <svg 
-          width={size} 
-          height={size * 0.6} 
-          viewBox="0 0 24 16" 
-          fill="none" 
+        <style>
+          {`
+            @keyframes fish-swim-${index} {
+              0% { left: ${isLeft ? endX : startX}; }
+              100% { left: ${isLeft ? startX : endX}; }
+            }
+          `}
+        </style>
+        <svg
+          width={size}
+          height={size * 0.6}
+          viewBox="0 0 24 16"
+          fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="text-primary/50"
         >
-          <path 
-            d="M18 8c0 2.5-4 6-10 6C4 14 2 12.5 2 10.5S4 8 8 8c6 0 10 -2.5 10-6S14 0 8 0C4 0 2 1.5 2 3.5M2 3.5V10.5M6 5l-2 1.5M6 11l-2-1.5" 
-            stroke="currentColor" 
-            strokeWidth="1" 
-            strokeLinecap="round" 
+          <path
+            d="M18 8c0 2.5-4 6-10 6C4 14 2 12.5 2 10.5S4 8 8 8c6 0 10 -2.5 10-6S14 0 8 0C4 0 2 1.5 2 3.5M2 3.5V10.5M6 5l-2 1.5M6 11l-2-1.5"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeLinecap="round"
             strokeLinejoin="round"
           />
           <circle cx="5" cy="7" r="1" fill="currentColor" />
@@ -38,7 +61,7 @@ export const SwimmingFish = ({ count = 5 }) => {
       </div>
     );
   });
-  
+
   return <>{fish}</>;
 };
 
@@ -114,9 +137,11 @@ export const Seaweed = ({ count = 4 }) => {
 export const AquaticBackground = () => {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="relative w-full h-full">
       <SwimmingFish count={5} />
       <Bubbles count={15} />
       <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-primary/5 to-transparent" />
+    </div>
     </div>
   );
 };

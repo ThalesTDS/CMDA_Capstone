@@ -86,7 +86,7 @@ class ProjectAnalyzer:
         - Triggers garbage collection to finalize and free memory.
         - Exits the program to terminate any stray non-daemon threads.
         """
-        import sys, gc
+        import gc
         # noinspection PyBroadException
         try:
             import torch
@@ -98,25 +98,25 @@ class ProjectAnalyzer:
 
     @staticmethod
     def input_validation(file_path: str) -> Dict[str, int | str]:
-        if not file_path: # Check for None or empty string
+        if not file_path:  # Check for None or empty string
             return {"code": -1, "message": "No file or directory provided."}
-        if not os.path.exists(file_path): # Check if path exists
+        if not os.path.exists(file_path):  # Check if path exists
             return {"code": -2, "message": f"Invalid file or directory path: {file_path}"}
-        if not os.path.isfile(file_path) and not os.path.isdir(file_path): # Check if it's a file or directory
+        if not os.path.isfile(file_path) and not os.path.isdir(file_path):  # Check if it's a file or directory
             return {"code": -3, "message": f"Path is neither a file nor a directory: {file_path}"}
         if os.path.isfile(file_path):
-            if not file_path.endswith(".py"): # Check for Python file extension
+            if not file_path.endswith(".py"):  # Check for Python file extension
                 return {"code": -4, "message": f"File is not a Python (.py) file: {file_path}"}
             if os.path.getsize(file_path) == 0:  # Check for empty file
                 return {"code": -5, "message": f"File is empty: {file_path}"}
         if os.path.isdir(file_path):
-            py_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(file_path) for f in filenames if f.endswith(".py")]
+            py_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(file_path) for f in filenames if
+                        f.endswith(".py")]
             if not py_files:  # Check if directory contains Python files
                 return {"code": -6, "message": f"Directory does not contain any Python (.py) files: {file_path}"}
         if not os.access(file_path, os.R_OK):  # Check for read permissions
             return {"code": -7, "message": f"Permission denied for file or directory: {file_path}"}
         return {"code": 0, "message": "Validation successful."}
-
 
     # =============================================================================
     # Main Routine
@@ -138,6 +138,7 @@ class ProjectAnalyzer:
 
 if __name__ == "__main__":
     import sys
+
     user_input = sys.argv[1] if len(sys.argv) > 1 else None
     result = ProjectAnalyzer.main(user_input)
     print(result["message"])
