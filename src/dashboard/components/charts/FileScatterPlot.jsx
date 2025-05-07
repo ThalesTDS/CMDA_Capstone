@@ -165,10 +165,6 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
 
     return (
         <div className="w-full flex flex-row">
-            {/* Left axis label */}
-            <div className="flex flex-col items-center mr-2 mt-16">
-                <span className="text-xs font-semibold rotate-[-45deg] text-gray-500" style={{writingMode: 'vertical-lr', transform: 'rotate(-90deg)'}}>File</span>
-            </div>
             <div className="flex-1">
                 <div className="flex justify-end mb-4">
                     <div className="flex items-center">
@@ -195,6 +191,10 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
 
                 <div className="h-80">
                     <canvas ref={chartRef}></canvas>
+                </div>
+                {/* Add x-axis label below the chart */}
+                <div className="flex justify-center mt-2">
+                    <span className="text-xs font-semibold text-gray-500">File</span>
                 </div>
 
                 {isTruncated && (

@@ -8,7 +8,8 @@ const CompassAnimation = () => {
     const {theme} = useTheme();
 
     return (
-        <div className="hidden md:block absolute right-20 top-1/2 transform -translate-y-1/2 pointer-events-none">
+        // Hide on small screens, reduce right offset on md screens
+        <div className="hidden lg:block absolute right-8 md:right-12 top-1/2 transform -translate-y-1/2 pointer-events-none">
             <svg
                 width="40"
                 height="40"
@@ -91,14 +92,21 @@ const Header = () => {
     const {metricsData, isLoading} = useMetrics();
     const {theme} = useTheme();
     const [scrolled, setScrolled] = useState(false);
+    const ticking = useRef(false);
 
-    // Handle scroll effect
+    // Handle scroll effect (throttled and stable)
     useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 10);
+            if (!ticking.current) {
+                window.requestAnimationFrame(() => {
+                    setScrolled(window.scrollY > 10);
+                    ticking.current = false;
+                });
+                ticking.current = true;
+            }
         };
 
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, {passive: true});
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 

@@ -6,10 +6,19 @@ function seededRandom(seed) {
     return x - Math.floor(x);
 }
 
+// Generate a blue shade based on a seed
+function getFishColor(seed) {
+    // H: 195-210, S: 70-90%, L: 55-70%
+    const h = 195 + Math.floor(seededRandom(seed) * 15);
+    const s = 70 + Math.floor(seededRandom(seed + 1) * 20);
+    const l = 45 + Math.floor(seededRandom(seed + 2) * 15);
+    return `hsl(${h},${s}%,${l}%)`;
+}
+
 // Fish swimming animations for aquatic theme
 export const SwimmingFish = ({count = 5}) => {
     // Alternate direction by index, and spread positions/delays
-    const fish = Array.from({length: count * 2}, (_, index) => {
+    const fish = Array.from({length: count}, (_, index) => {
         const isLeft = index % 2 === 1; // Odd indices go left, even go right
         const baseSeed = index + 1;
 
@@ -19,13 +28,14 @@ export const SwimmingFish = ({count = 5}) => {
         const posY = 10 + seededRandom(baseSeed + 100) * 80; // 10-90%
 
         // Increase travel distance: start far off-screen and end far off-screen
-        // Further increase so fish are not visible at start
         const startX = isLeft ? '160%' : '-60%';
         const endX = isLeft ? '-60%' : '160%';
 
         // Vary animation duration more significantly, stable per fish
         const duration = 14 + Math.floor(seededRandom(baseSeed + 200) * 26); // 14s to 40s
 
+        // Color for this fish
+        const fishColor = getFishColor(baseSeed);
         return (
             <div
                 key={index}
@@ -52,7 +62,7 @@ export const SwimmingFish = ({count = 5}) => {
             }
           `}
                 </style>
-                {/* Simple fish SVG */}
+                {/* Fish SVG with variable color */}
                 <svg
                     width={size}
                     height={size * 0.6}
@@ -62,9 +72,9 @@ export const SwimmingFish = ({count = 5}) => {
                     className="text-primary/60"
                 >
                     {/* Fish body */}
-                    <ellipse cx="22" cy="14" rx="14" ry="10" fill="#0EA5E9" opacity="0.7"/>
+                    <ellipse cx="22" cy="14" rx="14" ry="10" fill={fishColor} opacity="0.85"/>
                     {/* Fish tail */}
-                    <polygon points="36,14 48,4 48,24" fill="#0EA5E9" opacity="0.5"/>
+                    <polygon points="36,14 48,4 48,24" fill={fishColor} opacity="0.6"/>
                     {/* Fish fin */}
                     <polygon points="18,10 24,6 22,14" fill="#38BDF8" opacity="0.7"/>
                     {/* Fish eye */}
@@ -82,23 +92,40 @@ export const SwimmingFish = ({count = 5}) => {
 export const Bubbles = ({count = 15}) => {
     // Create multiple bubbles with different sizes, delays, and positions
     const bubbles = Array.from({length: count}, (_, index) => {
-        const delay = index * 0.5; // Spread out bubble animations
-        const size = 6 + Math.random() * 12; // Random sizes
-        const posX = Math.random() * 100; // Random horizontal positions
+        const baseSeed = index + 1000;
+        const delay = seededRandom(baseSeed) * 8; // 0-8s
+        const size = 6 + seededRandom(baseSeed + 1) * 12; // 6-18px
+        const posX = seededRandom(baseSeed + 2) * 100; // 0-100%
+        const duration = 20 + seededRandom(baseSeed + 3) * 18; // 20-30s
+        const startY = -10 - seededRandom(baseSeed + 5) * 10; // Start above screen (-10% to -20%)
+        const endY = 100 + seededRandom(baseSeed + 4) * 10; // End below screen (100-110%)
 
         return (
             <div
                 key={index}
-                className="absolute rounded-full bg-primary/20 animate-bubbles-rise"
+                className="absolute rounded-full bg-primary/20"
                 style={{
                     width: `${size}px`,
                     height: `${size}px`,
                     left: `${posX}%`,
-                    bottom: '0',
+                    bottom: 0,
+                    opacity: 0,
+                    animation: `bubble-rise-${index} ${duration}s linear infinite`,
                     animationDelay: `${delay}s`,
-                    animationDuration: `${10 + Math.random() * 15}s`
+                    animationFillMode: 'forwards'
                 }}
-            />
+            >
+                <style>
+                    {`
+                    @keyframes bubble-rise-${index} {
+                        0% { bottom: ${startY}%; opacity: 0; }
+                        5% { opacity: 1; }
+                        95% { opacity: 1; }
+                        100% { bottom: ${endY}%; opacity: 0; }
+                    }
+                    `}
+                </style>
+            </div>
         );
     });
 
@@ -106,12 +133,18 @@ export const Bubbles = ({count = 15}) => {
 };
 
 // Seaweed animation for aquatic theme
-export const Seaweed = ({count = 4}) => {
+export const Seaweed = ({count = 12}) => {
+    // More seaweed, more spread out, more varying sizes, and less scroll effect
     const seaweed = Array.from({length: count}, (_, index) => {
-        const posX = 10 + (index * 25); // Space out horizontally
-        const height = 80 + Math.random() * 80; // Vary heights
-        const width = 20 + Math.random() * 20; // Vary widths
-        const animationDuration = 3 + Math.random() * 4; // Vary animation speeds
+        // Spread seaweed more evenly across the width
+        const posX = 2 + (index * (96 / (count - 1))); // 2% to 98%
+        // More variance in height and width
+        const baseSeed = index + 5000;
+        const height = 60 + seededRandom(baseSeed) * 180; // 60-240px
+        const width = 10 + seededRandom(baseSeed + 1) * 30; // 10-40px
+        // Animation duration and phase for more natural movement
+        const animationDuration = 4 + seededRandom(baseSeed + 2) * 6; // 4-10s
+        const animationDelay = seededRandom(baseSeed + 3) * 6; // 0-6s
 
         return (
             <div
@@ -121,7 +154,8 @@ export const Seaweed = ({count = 4}) => {
                     left: `${posX}%`,
                     height: `${height}px`,
                     width: `${width}px`,
-                    animation: `sway ${animationDuration}s ease-in-out infinite alternate`
+                    animation: `sway ${animationDuration}s ease-in-out ${animationDelay}s infinite alternate`,
+                    willChange: 'transform'
                 }}
             >
                 <svg
@@ -151,6 +185,7 @@ export const AquaticBackground = () => {
     return (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
             <div className="relative w-full h-full">
+                <Seaweed count={12}/>
                 <SwimmingFish count={5}/>
                 <Bubbles count={15}/>
                 <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-primary/5 to-transparent"/>

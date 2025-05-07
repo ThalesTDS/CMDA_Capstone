@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {useMetrics} from '../../contexts/MetricsContext';
 import {useTheme} from '../../contexts/ThemeContext';
 import NativeDialogButton from '../common/NativeDialogButton';
-import {Bubbles, SwimmingFish} from '../common/AquaticElements';
+import {Bubbles, Seaweed} from '../common/AquaticElements';
 
 // Ship animation component factory - creates multiple ships with different properties
 const createAnimatedShips = (count = 4) => {
@@ -19,7 +19,7 @@ const createAnimatedShips = (count = 4) => {
         return (
             <div
                 key={index}
-                className="absolute overflow-visible pointer-events-none z-20"
+                className="absolute overflow-visible pointer-events-none"
                 style={{
                     top: `${position}%`,
                     transform: 'translateY(-50%)',
@@ -175,8 +175,8 @@ const WelcomePage = () => {
                 <ParticleEffect/>
                 {theme === 'aquatic' && (
                     <>
-                        <SwimmingFish count={5}/>
-                        <Bubbles count={30}/>
+                        <Seaweed count={4}/>
+                        <Bubbles count={20}/>
                         <WaveAnimation/>
                     </>
                 )}
