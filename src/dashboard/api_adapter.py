@@ -1,12 +1,12 @@
 import os
 import sys
-import json
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import subprocess
+import json
+
 from flask import Flask, request, jsonify, send_file, redirect
-from flask.cli import ScriptInfo
-import time
-import threading
 
 # Add the parent directory to the path so we can import
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,22 +35,25 @@ analysis_status = {
     'error': None
 }
 
-# Native file dialog function
-def select_file_or_directory():
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    answer = messagebox.askquestion("Select Type", "Single File?\nClick 'No' to select a folder.")
-    if answer == 'yes':
-        path = filedialog.askopenfilename(
-            title="Select Python File",
-            filetypes=[("Python Files", "*.py"), ("All Files", "*.*")]
-        )
-    else:
-        path = filedialog.askdirectory(title="Select Folder")
-
-    root.destroy()  # Clean up the tkinter instance
-    return path
+# Native file dialog function (run in subprocess for thread safety)
+def select_file_or_directory_subprocess():
+    """
+    Launch a subprocess to open the tkinter dialog in a main thread.
+    Returns the selected path or None.
+    """
+    helper_script = os.path.join(os.path.dirname(__file__), "file_dialog_helper.py")
+    result = subprocess.run(
+        [sys.executable, helper_script],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        try:
+            data = json.loads(result.stdout.strip())
+            return data.get("path")
+        except Exception:
+            return None
+    return None
 
 @app.route('/api/metrics')
 def get_metrics():
@@ -124,7 +127,7 @@ def analyze_path():
 @app.route('/api/file-dialog', methods=['GET'])
 def file_dialog():
     """Open a native file dialog and return the selected path."""
-    path = select_file_or_directory()
+    path = select_file_or_directory_subprocess()
     if path:
         return jsonify({"path": path})
     return jsonify({"error": "No file selected"}), 400

@@ -9,22 +9,7 @@ import ResultsView from './components/views/ResultsView';
 const AppContent = () => {
   const { metricsData, loadMetricsFromCSV, analyzePath } = useMetrics();
   const [showWelcome, setShowWelcome] = useState(true);
-  
-  // Try to load metrics data on mount, but don't show error if none exists yet
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        await loadMetricsFromCSV();
-        setShowWelcome(false);
-      } catch (error) {
-        console.log('No previous metrics data found');
-        // This is expected for first run, so we just stay on welcome page
-      }
-    };
-    
-    loadInitialData();
-  }, []);
-  
+
   // Listen for new analysis events from the header component
   useEffect(() => {
     const handleNewAnalysisEvent = () => {

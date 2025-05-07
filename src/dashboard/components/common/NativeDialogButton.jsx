@@ -27,8 +27,9 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
       }
       
       if (data.path) {
-        setSelectedPath(data.path);
-        onSelectPath(data.path);
+        const unixPath = data.path.replace(/\\+/g, '/');
+        setSelectedPath(unixPath);
+        onSelectPath?.(unixPath);
       }
     } catch (err) {
       console.error('Error opening file dialog:', err);

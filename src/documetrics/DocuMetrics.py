@@ -136,7 +136,7 @@ class ProjectAnalyzer:
         ProjectAnalyzer.cleanup()
         return validation_result
 
-# TODO: Remove:
+
 if __name__ == "__main__":
     import sys
     user_input = sys.argv[1] if len(sys.argv) > 1 else None

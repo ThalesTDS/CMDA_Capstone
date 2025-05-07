@@ -1,1 +1,2 @@
 recursive-include src/dashboard/templates *.html
+recursive-include src/dashboard/static *

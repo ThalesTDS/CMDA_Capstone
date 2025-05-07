@@ -7,6 +7,9 @@ export const fetchMetricsData = async () => {
     const response = await fetch('/api/metrics');
     
     if (!response.ok) {
+      if (response.status === 404) {
+        return { error: true, message: "No metrics data available yet. Please analyze a file first." };
+      }
       throw new Error(`Failed to load metrics: ${response.statusText}`);
     }
     
@@ -19,10 +22,11 @@ export const fetchMetricsData = async () => {
 
 /**
  * Analyze a file or directory path
- * @param {string} path - The file or directory path to analyze
+ * @param {string} rawPath - The file or directory path to analyze
  * @returns {Promise<Object>} - Analysis result indicating it started
  */
-export const analyzePath = async (path) => {
+export const analyzePath = async (rawPath) => {
+  const path = rawPath.replace(/\\/g, '/');   // keeps ProjectAnalyzer happy
   try {
     const response = await fetch('/api/analyze', {
       method: 'POST',
