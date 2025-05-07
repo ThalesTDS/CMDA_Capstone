@@ -95,7 +95,6 @@ class ProjectAnalyzer:
         except Exception:
             pass
         gc.collect()  # encourage finalizers
-        sys.exit(0)  # kill stray non-daemon threads
 
     @staticmethod
     def input_validation(file_path: str) -> Dict[str, int | str]:

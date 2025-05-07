@@ -8,6 +8,8 @@ export const MetricsProvider = ({ children }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('');
 
   // Load metrics from CSV
   const loadMetricsFromCSV = async () => {
@@ -80,19 +82,27 @@ export const MetricsProvider = ({ children }) => {
       const maxAttempts = 60; // 5 minutes maximum (with 5s intervals)
       
       while (!completed && attempts < maxAttempts) {
+        console.log("[Polling] Fetching /api/status...");
         const response = await fetch('/api/status');
         if (!response.ok) {
           throw new Error('Failed to fetch analysis status');
         }
         
         const status = await response.json();
-        
+        console.log("[Polling] Status:", status);
+
+        // Update progress and status message for UI
+        setProgress(status.progress || 0);
+        setStatusMessage(status.status_message || '');
+
         if (status.error) {
           throw new Error(status.error);
         }
         
         if (!status.in_progress) {
           completed = true;
+          setProgress(100);
+          setStatusMessage(status.status_message || 'Analysis complete');
           if (status.result && status.result.code === 0) {
             // Analysis completed successfully, load the metrics
             await loadMetricsFromCSV();
@@ -100,10 +110,6 @@ export const MetricsProvider = ({ children }) => {
             throw new Error(status.result?.message || 'Analysis failed');
           }
         } else {
-          // Update progress information
-          // This could be used to show a progress bar
-          console.log(`Analysis progress: ${status.progress}% - ${status.status_message}`);
-          
           // Wait before polling again
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
@@ -117,6 +123,8 @@ export const MetricsProvider = ({ children }) => {
       
       setIsLoading(false);
     } catch (err) {
+      setProgress(100);
+      setStatusMessage('Error: ' + err.message);
       console.error('Error during analysis polling:', err);
       setError(err.message);
       setIsLoading(false);
@@ -150,6 +158,8 @@ export const MetricsProvider = ({ children }) => {
         analyzePath,
         getFileMetrics,
         getProjectMetrics,
+        progress,
+        statusMessage,
       }}
     >
       {children}
