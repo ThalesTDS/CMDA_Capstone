@@ -39,13 +39,16 @@ export const SwimmingFish = ({count = 5}) => {
                     animation: `fish-swim-${index} ${duration}s linear infinite`,
                     animationDelay: `${delay}s`,
                     transform: !isLeft ? 'scaleX(-1)' : 'none', // Flip right-moving fish, so all face right
+                    opacity: 0,
+                    animationFillMode: 'forwards',
                 }}
             >
                 <style>
                     {`
             @keyframes fish-swim-${index} {
-              0% { left: ${startX}; }
-              100% { left: ${endX}; }
+              0% { left: ${startX}; opacity: 0; }
+              1% { opacity: 1; }
+              100% { left: ${endX}; opacity: 1; }
             }
           `}
                 </style>
@@ -155,10 +158,3 @@ export const AquaticBackground = () => {
         </div>
     );
 };
-
-// Add this style to your global.css
-// @keyframes sway {
-//   0% { transform: rotate(-5deg); }
-//   100% { transform: rotate(5deg); }
-// }
-

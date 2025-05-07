@@ -177,7 +177,7 @@ const WelcomePage = () => {
             {theme === 'aquatic' && (
                 <>
                     <SwimmingFish count={5}/>
-                    <Bubbles count={20}/>
+                    <Bubbles count={30}/>
                 </>
             )}
 
