@@ -17,6 +17,9 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
 
     const isTruncated = files.length > maxFiles;
 
+    // Number labels for x-axis
+    const numberLabels = limitedFiles.map((_, idx) => (idx + 1).toString());
+
     useEffect(() => {
         if (!chartRef.current || !limitedFiles.length) return;
 
@@ -37,47 +40,45 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
             gridLines: theme === 'aquatic' ? 'rgba(0, 114, 181, 0.2)' : 'rgba(138, 43, 226, 0.2)',
         };
 
-        // Prepare data
-        const labels = limitedFiles.map(file => formatFileName(file.identifier));
-
         // Set the max bubble size based on the largest line count
         const maxLineCount = Math.max(...limitedFiles.map(file => file.line_count));
 
-        // Create datasets separated by doc_type
+        // Prepare datasets using number labels for x
         const datasets = [
             {
                 label: 'Human',
                 data: limitedFiles
-                    .filter(file => (file.doc_type?.toLowerCase() || 'unknown') === 'human')
-                    .map(file => ({
-                        x: formatFileName(file.identifier),
-                        y: file[selectedMetric] || 0,
-                        r: Math.max(5, (file.line_count / maxLineCount) * 20)
-                    })),
+                    .map((file, idx) => ({
+                        x: (idx + 1).toString(),
+                        y: (file.doc_type?.toLowerCase() || 'unknown') === 'human' ? (file[selectedMetric] || 0) : null,
+                        r: Math.max(5, (file.line_count / maxLineCount) * 20),
+                        fileIdx: idx
+                    }))
+                    .filter(d => d.y !== null),
                 backgroundColor: colors.human,
                 borderColor: colors.humanBorder,
                 borderWidth: 1,
             },
             {
-                label: 'Llm',
+                label: 'LLM',
                 data: limitedFiles
-                    .filter(file => (file.doc_type?.toLowerCase() || 'unknown') === 'llm')
-                    .map(file => ({
-                        x: formatFileName(file.identifier),
-                        y: file[selectedMetric] || 0,
-                        r: Math.max(5, (file.line_count / maxLineCount) * 20)
-                    })),
+                    .map((file, idx) => ({
+                        x: (idx + 1).toString(),
+                        y: (file.doc_type?.toLowerCase() || 'unknown') === 'llm' ? (file[selectedMetric] || 0) : null,
+                        r: Math.max(5, (file.line_count / maxLineCount) * 20),
+                        fileIdx: idx
+                    }))
+                    .filter(d => d.y !== null),
                 backgroundColor: colors.llm,
                 borderColor: colors.llmBorder,
                 borderWidth: 1,
             }
         ];
 
-        // Create chart
         chartInstance.current = new Chart(ctx, {
             type: 'bubble',
             data: {
-                labels,
+                labels: numberLabels,
                 datasets
             },
             options: {
@@ -89,14 +90,13 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
                         position: 'bottom',
                         title: {
                             display: true,
-                            text: 'Files',
-                            color: colors.text,
-                            font: {
-                                weight: 'bold'
-                            }
+                            text: '', // No axis title, we'll add "File" label manually
                         },
                         ticks: {
-                            color: colors.text
+                            color: colors.text,
+                            callback: function(value, idx) {
+                                return numberLabels[idx];
+                            }
                         },
                         grid: {
                             color: colors.gridLines
@@ -125,8 +125,8 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                // Find the file by matching the label (x value)
-                                const file = limitedFiles.find(f => formatFileName(f.identifier) === context.raw.x);
+                                const idx = parseInt(context.raw.x, 10) - 1;
+                                const file = limitedFiles[idx];
                                 if (!file) return '';
                                 const metricValue = file[selectedMetric]?.toFixed(2) ?? 'N/A';
                                 const lineCount = file.line_count;
@@ -164,40 +164,57 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
     }, [limitedFiles, selectedMetric, theme]);
 
     return (
-        <div className="w-full">
-            <div className="flex justify-end mb-4">
-                <div className="flex items-center">
-                    <label className="mr-2 text-sm font-medium">Metric:</label>
-                    <select
-                        value={selectedMetric}
-                        onChange={(e) => setSelectedMetric(e.target.value)}
-                        className={`
-              text-sm rounded-md border px-3 py-1.5 
-              ${theme === 'neon'
-                            ? 'bg-neon-surface border-neon-border text-neon-text-primary'
-                            : 'bg-white border-primary/20 text-aquatic-text-primary'
-                        }
-            `}
-                    >
-                        {metricOptions.map(metric => (
-                            <option key={metric} value={metric}>
-                                {metric.charAt(0).toUpperCase() + metric.slice(1).replace(/_/g, ' ')}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+        <div className="w-full flex flex-row">
+            {/* Left axis label */}
+            <div className="flex flex-col items-center mr-2 mt-16">
+                <span className="text-xs font-semibold rotate-[-45deg] text-gray-500" style={{writingMode: 'vertical-lr', transform: 'rotate(-90deg)'}}>File</span>
             </div>
-
-            <div className="h-80">
-                <canvas ref={chartRef}></canvas>
-            </div>
-
-            {isTruncated && (
-                <div className="mt-2 text-center text-sm text-muted-foreground">
-                    Note: Only showing top {maxFiles} files by overall score. {files.length - maxFiles} additional files
-                    are not displayed.
+            <div className="flex-1">
+                <div className="flex justify-end mb-4">
+                    <div className="flex items-center">
+                        <label className="mr-2 text-sm font-medium">Metric:</label>
+                        <select
+                            value={selectedMetric}
+                            onChange={(e) => setSelectedMetric(e.target.value)}
+                            className={`
+                  text-sm rounded-md border px-3 py-1.5 
+                  ${theme === 'neon'
+                                    ? 'bg-neon-surface border-neon-border text-neon-text-primary'
+                                    : 'bg-white border-primary/20 text-aquatic-text-primary'
+                                }
+                `}
+                        >
+                            {metricOptions.map(metric => (
+                                <option key={metric} value={metric}>
+                                    {metric.charAt(0).toUpperCase() + metric.slice(1).replace(/_/g, ' ')}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
-            )}
+
+                <div className="h-80">
+                    <canvas ref={chartRef}></canvas>
+                </div>
+
+                {isTruncated && (
+                    <div className="mt-2 text-center text-sm text-muted-foreground">
+                        Note: Only showing top {maxFiles} files by overall score. {files.length - maxFiles} additional files
+                        are not displayed.
+                    </div>
+                )}
+            </div>
+            {/* File legend */}
+            <div className="ml-6 flex flex-col items-start justify-start mt-8">
+                <div className="font-semibold mb-2">Files</div>
+                <ul className="text-xs">
+                    {limitedFiles.map((file, idx) => (
+                        <li key={file.identifier} className="mb-1">
+                            <span className="font-bold">{idx + 1}.</span> {formatFileName(file.identifier)}
+                        </li>
+                    ))}
+                </ul>
+            </div>
         </div>
     );
 };
