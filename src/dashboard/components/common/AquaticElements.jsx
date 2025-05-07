@@ -83,7 +83,7 @@ export const Bubbles = ({count = 15}) => {
     // Create multiple bubbles with different sizes, delays, and positions
     const bubbles = Array.from({length: count}, (_, index) => {
         const delay = index * 0.5; // Spread out bubble animations
-        const size = 4 + Math.random() * 12; // Random sizes
+        const size = 6 + Math.random() * 12; // Random sizes
         const posX = Math.random() * 100; // Random horizontal positions
 
         return (

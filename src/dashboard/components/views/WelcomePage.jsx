@@ -171,16 +171,17 @@ const WelcomePage = () => {
     return (
         <div
             className={`flex flex-col items-center justify-center min-h-[calc(100vh-114px)] py-12 px-4 relative overflow-hidden ${theme === 'aquatic' ? 'bg-gradient-to-b from-background to-primary/5' : 'bg-gradient-to-b from-background to-neon-primary/20'}`}>
-            <ParticleEffect/>
-            <AnimatedShips/>
-            <WaveAnimation/>
-            {theme === 'aquatic' && (
-                <>
-                    <SwimmingFish count={5}/>
-                    <Bubbles count={30}/>
-                </>
-            )}
-
+            <div className="absolute inset-0 pointer-events-none z-0">
+                <ParticleEffect/>
+                {theme === 'aquatic' && (
+                    <>
+                        <SwimmingFish count={5}/>
+                        <Bubbles count={30}/>
+                        <WaveAnimation/>
+                    </>
+                )}
+            </div>
+            {/* Main content */}
             <div
                 className="text-center max-w-xl mx-auto z-10 backdrop-blur-sm bg-card/80 p-8 rounded-xl shadow-lg animate-float border border-primary/20">
                 <div className="mb-8">
@@ -247,3 +248,4 @@ const WelcomePage = () => {
 };
 
 export default WelcomePage;
+
