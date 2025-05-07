@@ -19,12 +19,12 @@ const MainLayout = ({children}) => {
 
     return (
         <div
-            className={`min-h-screen flex flex-col bg-background text-foreground transition-theme overflow-hidden ${theme === 'neon' ? 'neon-theme-wrapper' : 'aquatic-theme-wrapper'}`}>
+            className={`min-h-screen flex flex-col bg-background text-foreground transition-theme overflow-x-hidden ${theme === 'neon' ? 'neon-theme-wrapper' : 'aquatic-theme-wrapper'}`}>
             {/* Background elements */}
             {theme === 'neon' && (
                 <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                     <div
-                        className="absolute top-0 left-0 w-full h-screen bg-gradient-to-b from-[#120c29] via-[#0D0C22] to-[#1A1A3A] opacity-40"
+                        className="absolute top-0 left-0 w-full min-h-screen bg-gradient-to-b from-[#120c29] via-[#0D0C22] to-[#1A1A3A] opacity-40"
                         style={{transform: `translateY(${scrollY * 0.1}px)`}}
                     />
                     <div
@@ -42,7 +42,7 @@ const MainLayout = ({children}) => {
                 <>
                     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                         <div
-                            className="absolute top-0 left-0 w-full h-screen bg-gradient-to-b from-[#F0F8FF] via-[#F0F8FF] to-[#E0F4FF] opacity-60"
+                            className="absolute top-0 left-0 w-full min-h-screen bg-gradient-to-b from-[#F0F8FF] via-[#F0F8FF] to-[#E0F4FF] opacity-60"
                             style={{transform: `translateY(${scrollY * 0.1}px)`}}
                         />
                         <div

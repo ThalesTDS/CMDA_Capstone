@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import ThemeToggle from '../common/ThemeToggle';
 import {useMetrics} from '../../contexts/MetricsContext';
 import {useTheme} from '../../contexts/ThemeContext';
@@ -99,7 +99,10 @@ const Header = () => {
         const handleScroll = () => {
             if (!ticking.current) {
                 window.requestAnimationFrame(() => {
-                    setScrolled(window.scrollY > 10);
+                    const y = window.scrollY;
+                    setScrolled(prev =>
+                        y > 10 ? true : (y < 2 ? false : prev)
+                    );
                     ticking.current = false;
                 });
                 ticking.current = true;
