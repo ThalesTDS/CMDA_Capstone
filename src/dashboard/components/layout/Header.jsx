@@ -103,6 +103,8 @@ const Header = () => {
     // Create a custom event to trigger new analysis
     const event = new CustomEvent('documetricsNewAnalysis');
     window.dispatchEvent(event);
+    // Redirect to home page to start a new analysis
+    window.location.href = '/';
   };
   
   return (
