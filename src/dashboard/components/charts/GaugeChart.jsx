@@ -246,14 +246,11 @@ const GaugeChart = ({metric, value, size = 180}) => {
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
-                    position: 'absolute',
-                    top: 0,
-                    left: '-25px',
-                    right: 0,
                     pointerEvents: 'auto',
-                    transition: 'transform 0.2s cubic-bezier(.4,2,.6,1)', // smooth rise
-                    transform: isHovered ? 'translateY(-12px)' : 'none', // rise up on hover
+                    transition: 'transform 0.2s cubic-bezier(.4,2,.6,1)',
+                    transform: isHovered ? 'translateY(-12px)' : 'none',
                     zIndex: 1,
+                    overflow: 'hidden',
                 }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
@@ -263,6 +260,7 @@ const GaugeChart = ({metric, value, size = 180}) => {
                     style={{
                         display: 'block',
                         margin: '0 auto',
+                        marginLeft: `-30px`,
                         width: `${size}px`,
                         height: `${size / 1.5}px`,
                         cursor: 'pointer',
