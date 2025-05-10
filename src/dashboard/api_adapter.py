@@ -152,10 +152,11 @@ def analyze_path():
     if not file_path:
         return jsonify({"code": -1, "message": "No folder path provided."}), 400
 
+    # Check if analysis is already in progress
+    if analysis_status['in_progress']:
+        return jsonify({"code": -2, "message": "Analysis already in progress."}), 409
+
     # Start analysis in a separate thread
-    with status_lock:
-        analysis_status['in_progress'] = True
-        
     analysis_thread = threading.Thread(target=run_analysis_task, args=(file_path,))
     analysis_thread.start()
 
