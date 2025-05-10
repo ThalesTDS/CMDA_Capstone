@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "DocuMetrics"
 version = "1.1.0"
 description = "Tool to evaluate Python code documentation and display results via a React dashboard"
-# authors = [{ name = "Name", email = "email" }]
+author = [{ name = "Thales Savkli", email = "thales.savkli@gmail.com" }]
 readme = "README.md"
 license = { text = "MIT" }
 keywords = ["documentation", "python", "docstring", "quality", "code analysis"]

@@ -100,11 +100,15 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
                         },
                         grid: {
                             color: colors.gridLines
+                        },
+                        offset: true, // Centers data points in categories
+                        padding: {
+                            left: 20 // Add 20px padding to the left side of x-axis
                         }
                     },
                     y: {
                         beginAtZero: true,
-                        max: 1,
+                        max: 1.15, // Add headroom above 1.0
                         title: {
                             display: true,
                             text: selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1).replace(/_/g, ' '),
@@ -114,7 +118,12 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
                             }
                         },
                         ticks: {
-                            color: colors.text
+                            color: colors.text,
+                            callback: function(value) {
+                                // Only show ticks up to 1.0
+                                if (value > 1.0) return '';
+                                return value;
+                            }
                         },
                         grid: {
                             color: colors.gridLines
