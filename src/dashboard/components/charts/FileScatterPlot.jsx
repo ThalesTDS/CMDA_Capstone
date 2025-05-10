@@ -100,6 +100,10 @@ const FileScatterPlot = ({files, maxFiles = 8}) => {
                         },
                         grid: {
                             color: colors.gridLines
+                        },
+                        offset: true, // Centers data points in categories
+                        padding: {
+                            left: 20 // Add 20px padding to the left side of x-axis
                         }
                     },
                     y: {
