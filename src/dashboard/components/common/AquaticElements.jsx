@@ -144,7 +144,10 @@ export const Seaweed = ({count = 12}) => {
         const width = 10 + seededRandom(baseSeed + 1) * 30; // 10-40px
         // Animation duration and phase for more natural movement
         const animationDuration = 4 + seededRandom(baseSeed + 2) * 6; // 4-10s
-        const animationDelay = seededRandom(baseSeed + 3) * 6; // 0-6s
+        const animationDelay = seededRandom(baseSeed + 3) * 6 + 1.5; // Add 1.5s base delay
+
+        // Create unique animation name for this seaweed instance
+        const animationName = `sway-${index}`;
 
         return (
             <div
@@ -154,10 +157,20 @@ export const Seaweed = ({count = 12}) => {
                     left: `${posX}%`,
                     height: `${height}px`,
                     width: `${width}px`,
-                    animation: `sway ${animationDuration}s ease-in-out ${animationDelay}s infinite alternate`,
-                    willChange: 'transform'
+                    animation: `${animationName} ${animationDuration}s ease-in-out ${animationDelay}s infinite alternate`,
+                    animationFillMode: 'both', // Ensures it applies styles before animation starts
+                    willChange: 'transform',
+                    transform: 'rotate(0deg)' // Initial neutral state
                 }}
             >
+                <style>
+                    {`
+                    @keyframes ${animationName} {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(${seededRandom(baseSeed + 4) > 0.5 ? '' : '-'}${10 + Math.floor(seededRandom(baseSeed + 5) * 12.75)}deg); }
+                    }
+                    `}
+                </style>
                 <svg
                     viewBox="0 0 50 200"
                     fill="none"
