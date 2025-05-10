@@ -5,12 +5,15 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
   const { theme } = useTheme();
   const [selectedPath, setSelectedPath] = useState('');
   const [error, setError] = useState('');
-  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const handleOpenDialog = async () => {
-    if (isLoading) return;
+    // Prevent opening dialog if already loading or if dialog is already open
+    if (isLoading || isDialogOpen) return;
     
     setError('');
-    
+    setIsDialogOpen(true);
+
     try {
       // Call the backend API to open the native folder dialog
       const response = await fetch('/api/file-dialog');
@@ -34,13 +37,15 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
     } catch (err) {
       console.error('Error opening folder dialog:', err);
       setError('Failed to open folder dialog');
+    } finally {
+      setIsDialogOpen(false);
     }
   };
   
   const buttonClasses = `
-    relative overflow-hidden px-6 py-3 text-lg rounded-lg cursor-pointer 
+    relative overflow-hidden px-6 py-3 text-lg rounded-lg 
     inline-block transition-all duration-300 
-    ${isLoading ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-lg'} 
+    ${isLoading || isDialogOpen ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-lg cursor-pointer'} 
     ${theme === 'neon' 
       ? 'bg-neon-primary text-white shadow-[0_0_15px_rgba(138,43,226,0.5)]' 
       : 'bg-primary text-white shadow-md'
@@ -52,7 +57,7 @@ const NativeDialogButton = ({ onSelectPath, isLoading = false, className = '' })
       <button
         type="button"
         onClick={handleOpenDialog}
-        disabled={isLoading}
+        disabled={isLoading || isDialogOpen}
         className={buttonClasses}
       >
         <span className="flex items-center justify-center gap-3">

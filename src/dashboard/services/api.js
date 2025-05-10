@@ -28,6 +28,15 @@ export const fetchMetricsData = async () => {
 export const analyzePath = async (rawPath) => {
     const path = rawPath.replace(/\\/g, '/');   // keeps ProjectAnalyzer happy
     try {
+        // Check the current status before starting a new analysis
+        const statusResponse = await fetch('/api/status');
+        if (statusResponse.ok) {
+            const status = await statusResponse.json();
+            if (status.in_progress) {
+                throw new Error('Analysis already in progress');
+            }
+        }
+
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: {
