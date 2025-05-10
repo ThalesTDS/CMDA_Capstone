@@ -6,4 +6,6 @@ __pycache__/
 venv/
 src/dashboard/node_modules
 src/dashboard/build
+src/dashboard/static
 /dashboard/
+src/documetrics/outputs
