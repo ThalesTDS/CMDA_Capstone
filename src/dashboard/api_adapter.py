@@ -33,12 +33,32 @@ analysis_status = {
     'error': None
 }
 
+# Add a lock for thread safety
+status_lock = threading.Lock()
+
+# Flag to track if a dialog is currently open
+dialog_open = False
+dialog_lock = threading.Lock()
 
 # Remove subprocess logic, use direct Tkinter dialog for folder selection
 def select_folder_dialog():
     """
     Open a native folder dialog and return the selected path or None.
     """
+    global dialog_open
+    
+    # Check if dialog is already open or analysis is in progress
+    with dialog_lock:
+        if dialog_open:
+            return None
+        dialog_open = True
+    
+    with status_lock:
+        if analysis_status['in_progress']:
+            with dialog_lock:
+                dialog_open = False
+            return None
+    
     root = tk.Tk()
     root.withdraw()
     # Make sure the dialog appears on top
@@ -50,6 +70,8 @@ def select_folder_dialog():
         return None
     finally:
         root.destroy()
+        with dialog_lock:
+            dialog_open = False
 
 
 @app.route('/api/metrics')
@@ -67,38 +89,44 @@ def run_analysis_task(file_path):
 
     try:
         print("[Analysis] Starting analysis thread")
-        analysis_status['in_progress'] = True
-        analysis_status['progress'] = 10
-        analysis_status['status_message'] = 'Validating path...'
-        analysis_status['error'] = None  # Clear previous error
+        with status_lock:
+            analysis_status['in_progress'] = True
+            analysis_status['progress'] = 10
+            analysis_status['status_message'] = 'Validating path...'
+            analysis_status['error'] = None  # Clear previous error
 
         # Path validation
-        analysis_status['progress'] = 20
-        analysis_status['status_message'] = 'Beginning analysis...'
+        with status_lock:
+            analysis_status['progress'] = 20
+            analysis_status['status_message'] = 'Beginning analysis...'
         print("[Analysis] Path validated")
 
         # Run analysis
-        analysis_status['progress'] = 40
-        analysis_status['status_message'] = 'Processing files...'
+        with status_lock:
+            analysis_status['progress'] = 40
+            analysis_status['status_message'] = 'Processing files...'
         print("[Analysis] Calling ProjectAnalyzer.main")
         result = ProjectAnalyzer.main(file_path)
         print("[Analysis] ProjectAnalyzer.main returned")
 
-        analysis_status['progress'] = 90
-        analysis_status['status_message'] = 'Finalizing results...'
-        analysis_status['result'] = result
+        with status_lock:
+            analysis_status['progress'] = 90
+            analysis_status['status_message'] = 'Finalizing results...'
+            analysis_status['result'] = result
 
-        analysis_status['progress'] = 100
-        analysis_status['status_message'] = 'Analysis complete'
-        analysis_status['in_progress'] = False
+        with status_lock:
+            analysis_status['progress'] = 100
+            analysis_status['status_message'] = 'Analysis complete'
+            analysis_status['in_progress'] = False
         print("[Analysis] Analysis complete")
     except Exception as e:
         print("[Analysis] Exception occurred:", e)
-        analysis_status['error'] = str(e)
-        analysis_status['result'] = None
-        analysis_status['progress'] = 100  # Ensure progress is set to 100 on error
-        analysis_status['in_progress'] = False
-        analysis_status['status_message'] = f'Error: {str(e)}'
+        with status_lock:
+            analysis_status['error'] = str(e)
+            analysis_status['result'] = None
+            analysis_status['progress'] = 100  # Ensure progress is set to 100 on error
+            analysis_status['in_progress'] = False
+            analysis_status['status_message'] = f'Error: {str(e)}'
 
 
 @app.route('/api/analyze', methods=['POST'])
@@ -106,14 +134,17 @@ def analyze_path():
     """Handle folder path analysis."""
     global analysis_status
 
-    # Reset status
-    analysis_status = {
-        'in_progress': False,
-        'progress': 0,
-        'status_message': '',
-        'result': None,
-        'error': None
-    }
+    with status_lock:
+        # Reset status if not already in progress
+        if analysis_status['in_progress']:
+            return jsonify({"code": -2, "message": "Analysis already in progress."}), 409
+            
+        # Reset status for a new analysis
+        analysis_status['in_progress'] = False
+        analysis_status['progress'] = 0
+        analysis_status['status_message'] = ''
+        analysis_status['result'] = None
+        analysis_status['error'] = None
 
     data = request.json
     file_path = data.get('path')
@@ -121,11 +152,10 @@ def analyze_path():
     if not file_path:
         return jsonify({"code": -1, "message": "No folder path provided."}), 400
 
-    # Check if analysis is already in progress
-    if analysis_status['in_progress']:
-        return jsonify({"code": -2, "message": "Analysis already in progress."}), 409
-
     # Start analysis in a separate thread
+    with status_lock:
+        analysis_status['in_progress'] = True
+        
     analysis_thread = threading.Thread(target=run_analysis_task, args=(file_path,))
     analysis_thread.start()
 
@@ -135,6 +165,11 @@ def analyze_path():
 @app.route('/api/file-dialog', methods=['GET'])
 def file_dialog():
     """Open a native folder dialog and return the selected path."""
+    # Check if analysis is already in progress
+    with status_lock:
+        if analysis_status['in_progress']:
+            return jsonify({"error": "Analysis is already in progress"}), 409
+    
     path = select_folder_dialog()
     if path:
         return jsonify({"path": path})
@@ -144,7 +179,9 @@ def file_dialog():
 @app.route('/api/status')
 def get_analysis_status():
     """Get the current status of analysis."""
-    return jsonify(analysis_status)
+    with status_lock:
+        current_status = dict(analysis_status)
+    return jsonify(current_status)
 
 
 @app.route('/api/download')
