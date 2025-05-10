@@ -193,5 +193,4 @@ def catch_all(path):
 
 
 if __name__ == '__main__':
-    # Force threaded mode for Flask dev server
-    app.run(port=5000, threaded=True, debug=True, use_reloader=True)
+    app.run(port=5000, threaded=True)

@@ -1,16 +1,22 @@
 # DocuMetrics React Dashboard
 
-A modern React dashboard for visualizing code documentation quality metrics.
+A modern React dashboard for visualizing code documentation quality metrics with an immersive aquatic and neon (toggleable) theme.
 
 ## Features
 
-- Interactive visualization of documentation metrics
-- Gauge charts for individual metrics
-- Radar chart for comprehensive metric comparison
-- File selection and comparison
-- Project overview with aggregate metrics
-- Toggleable themes (Aquatic and Neon-Futuristic)
-- Responsive design for all device sizes
+- **Interactive Visualizations**
+  - Gauge charts for individual metrics
+  - Radar chart for comprehensive metric comparison
+  - Scatter plot for file-by-file comparison
+  
+- **Project Management**
+  - Folder selection for analyzing entire projects
+  - Project overview with aggregate metrics
+  
+- **Engaging User Interface**
+  - Immersive aquatic theme with animated fish, bubbles, and seaweed
+  - Toggleable themes (Aquatic and Neon-Futuristic)
+  - Responsive design for all device sizes
 
 ## Getting Started
 
@@ -54,9 +60,9 @@ The dashboard connects to the Flask backend through a REST API. The API adapter 
 ## Project Structure
 
 - `components/` - UI components
-  - `common/` - Reusable UI elements
-  - `layout/` - Page layouts
-  - `views/` - Main page views
+  - `common/` - Reusable UI elements and animations
+  - `layout/` - Page layouts and navigation
+  - `views/` - Main page views (Welcome, Results, Details)
   - `charts/` - Data visualization components
 - `contexts/` - React context providers
 - `hooks/` - Custom React hooks

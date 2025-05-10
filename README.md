@@ -17,34 +17,34 @@ DocuMetrics analyzes Python source code for the presence and quality of inline c
 ### **1. Code Parsing & Extraction**
 #### `CodeParser`
 - **`extract_comments(code: str) -> Tuple[List[str], List[str], List[int]]`**
-  - Extracts inline comments (with ≥3 non-whitespace chars before `#` and ≥4 after) and docstrings from source code.
-  - Returns inline comment lines, extracted docstrings, and their respective counts.
-- **Uses `ast.parse()` with BOM-safe reading and warnings suppressed.**
+  - Extracts inline comments (with ≥3 non-whitespace chars before `#` and ≥4 after) and docstrings from source code
+  - Returns inline comment lines, extracted docstrings, and their respective counts
+- **Uses `ast.parse()` with BOM-safe reading and warnings suppressed**
 
 ---
 
 ### **2. Metrics Calculation**
 #### `CodeMetrics`
 - **`compute_comment_density(code_lines: List[str]) -> float`**
-  - Measures the density of comment lines (inline or full-line) relative to code lines.
+  - Measures the density of comment lines (inline or full-line) relative to code lines
 - **`normalize_comment_density(ratio: float) -> float`**
-  - Scores density based on an ideal range (0.1 to 0.35) using linear normalization.
+  - Scores density based on an ideal range (0.1 to 0.35) using linear normalization
 - **`compute_completeness(code: str) -> float`**
-  - Assesses docstring structure (description, parameter coverage, return info) using `docstring_parser`.
+  - Assesses docstring structure (description, parameter coverage, return info) using `docstring_parser`
 - **`compute_conciseness(docstrings: List[str], verbose_threshold=20, similarity_threshold=0.70) -> float`**
-  - Penalizes verbose and redundant docstrings using token count and cosine similarity (Sentence-BERT).
+  - Penalizes verbose and redundant docstrings using token count and cosine similarity (Sentence-BERT)
 - **`evaluate_accuracy(comment: str, code_snippet: str) -> float`**
-  - Compares a comment’s semantic relevance to its associated code using Sentence-BERT.
+  - Compares a comment's semantic relevance to its associated code using Sentence-BERT
 - **`compute_accuracy_scores(inline_comments: List[str]) -> float`**
-  - Aggregates accuracy scores for inline comments.
+  - Aggregates accuracy scores for inline comments
 
 ---
 
 ### **3. File-Level Analysis**
 #### `CodeAnalyzer`
 - **`analyze_code(code: str, identifier: str) -> Optional[Dict[str, Any]]`**
-  - Evaluates code using all metrics and returns a dictionary with scores and metadata.
-  - Filters out files with fewer than 3 inline comments or 2 docstrings.
+  - Evaluates code using all metrics and returns a dictionary with scores and metadata
+  - Filters out files with no docstrings
 - **`analyze_file(file_path: str) -> Optional[Dict[str, Any]]`**
   - Reads a Python file (UTF-8 with BOM support) and analyzes it.
 
@@ -69,16 +69,15 @@ DocuMetrics analyzes Python source code for the presence and quality of inline c
   - Aggregates metrics across multiple files, weighted by line count.
   - Detects project type: Human, LLM, or Mixed.
 
----
-
-### **6. Metric Visualization**
+### **6. Interactive Dashboard**
 #### `Dashboard`
-
-
----
+- **React-based frontend with aquatic theme**
+- **Visual representations of metrics using charts and gauges**
+- **Project overview and file comparison capabilities**
+- **Responsive design for all screen sizes**
 
 ### **7. Project-Level Execution**
-#### `ProjectAnalyzer`
+#### `DocuMetrics: ProjectAnalyzer`
 - **`analyze_directory(directory: str) -> None`**
   - Runs analysis on all `.py` files in the given directory.
 - **`display_project_results(file_results: List[Dict[str, Any]]) -> None`**
@@ -86,13 +85,12 @@ DocuMetrics analyzes Python source code for the presence and quality of inline c
 
 ---
 
-### **8. Main Routine**
-#### `main()`
-- Loads a dataset directory and runs a full analysis + visualization.
+## Usage
 
-## How It Works
-1. The tool extracts comments and docstrings from Python files.
-2. Various metrics are computed for each file, evaluating documentation quality.
-3. Metrics are normalized and aggregated to provide overall scores.
-4. Results are displayed within the dashboard.
-5. Users can analyze a single file or an entire directory of Python files.
+1. Install DocuMetrics: `pip install .` (This step only needs to be done once.)
+2. Navigate to dashboard folder: `cd src/dashboard`
+3. Install dependencies & build: `npm install` & `npm run build` (These steps only need to be done once.)
+4. Run the backend server: `python src/dashboard/api_adapter.py`
+5. Open the dashboard: `http://localhost:5000`
+3. Select a folder containing Python files for analysis
+4. Explore the results in the interactive dashboard
